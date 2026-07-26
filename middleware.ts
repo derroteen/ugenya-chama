@@ -8,6 +8,7 @@ const protectedRouteRoles: Array<{ prefix: string; allowedRoles: Role[] }> = [
   { prefix: '/main-admin', allowedRoles: ['superadmin', 'main_admin'] },
   { prefix: '/branch-admin', allowedRoles: ['superadmin', 'main_admin', 'branch_admin'] },
   { prefix: '/member', allowedRoles: ['member'] },
+  { prefix: '/settings', allowedRoles: ['superadmin', 'main_admin', 'branch_admin', 'member'] },
 ]
 
 function matchesPrefix(pathname: string, prefix: string) {
