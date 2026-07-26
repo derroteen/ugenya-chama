@@ -157,10 +157,6 @@ export default function NavBar() {
   const pathname = usePathname();
   const supabase = useMemo(() => createClient(), []);
 
-  if (pathname === "/" || pathname === "/login" || pathname === "/select-branch") {
-    return null;
-  }
-
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasSession, setHasSession] = useState(false);
   const [role, setRole] = useState<Role | null>(null);
@@ -271,6 +267,10 @@ export default function NavBar() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [menuOpen]);
+
+  if (pathname === "/" || pathname === "/login" || pathname === "/select-branch") {
+    return null;
+  }
 
   async function handleLogout() {
     setHasSession(false);
