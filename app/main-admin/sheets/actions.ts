@@ -111,7 +111,7 @@ export async function openMonthForBranch(branchId: string, month: string): Promi
       memberIds.length
         ? supabase
             .from("monthly_savings")
-            .select("member_id, cumulative_saving, month")
+            .select("member_id, cumulative_saving, old_savings_bf, month")
             .in("member_id", memberIds)
             .order("month", { ascending: false })
         : Promise.resolve({ data: [], error: null }),
@@ -127,10 +127,17 @@ export async function openMonthForBranch(branchId: string, month: string): Promi
     if (latestMonthlyResult.error) throw latestMonthlyResult.error;
     if (latestEmergencyResult.error) throw latestEmergencyResult.error;
 
-    const latestMonthlyByMember = new Map<string, number>();
+    const latestMonthlyByMember = new Map<string, { cumulativeSaving: number; oldSavingsBf: number }>();
     for (const row of latestMonthlyResult.data ?? []) {
+      if (row.month >= normalizedMonth) {
+        continue;
+      }
+
       if (!latestMonthlyByMember.has(row.member_id)) {
-        latestMonthlyByMember.set(row.member_id, toNumber(row.cumulative_saving));
+        latestMonthlyByMember.set(row.member_id, {
+          cumulativeSaving: toNumber(row.cumulative_saving),
+          oldSavingsBf: toNumber(row.old_savings_bf),
+        });
       }
     }
 
@@ -142,12 +149,14 @@ export async function openMonthForBranch(branchId: string, month: string): Promi
     }
 
     const monthlyPayload = members.map((member) => {
-      const previousBalance = latestMonthlyByMember.get(member.id) ?? 0;
+      const latestMonthly = latestMonthlyByMember.get(member.id);
+      const previousBalance = latestMonthly?.cumulativeSaving ?? 0;
+      const oldSavingsBf = latestMonthly?.oldSavingsBf ?? 0;
       return {
         branch_id: branchId,
         member_id: member.id,
         month: normalizedMonth,
-        old_savings_bf: previousBalance,
+        old_savings_bf: oldSavingsBf,
         previous_balance_bf: previousBalance,
         subs: 0,
         cumulative_saving: previousBalance,
@@ -171,14 +180,16 @@ export async function openMonthForBranch(branchId: string, month: string): Promi
     });
 
     if (monthlyPayload.length > 0) {
-      const { error: monthlyInsertError } = await supabase.from("monthly_savings").insert(monthlyPayload);
+      const { error: monthlyInsertError } = await supabase
+        .from("monthly_savings")
+        .upsert(monthlyPayload, { onConflict: "branch_id,member_id,month", ignoreDuplicates: true });
       if (monthlyInsertError) throw monthlyInsertError;
     }
 
     if (emergencyPayload.length > 0) {
       const { error: emergencyInsertError } = await supabase
         .from("emergency_contributions")
-        .insert(emergencyPayload);
+        .upsert(emergencyPayload, { onConflict: "branch_id,member_id,month", ignoreDuplicates: true });
       if (emergencyInsertError) throw emergencyInsertError;
     }
   }
