@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import Link from "next/link";
 
 export default async function SuperadminDashboardPage() {
   const supabase = await createClient();
@@ -29,6 +30,14 @@ export default async function SuperadminDashboardPage() {
         <p className="mt-3 max-w-3xl text-base leading-7 sm:text-lg">
           Admin management and full system oversight will appear here.
         </p>
+        <div className="mt-6">
+          <Link
+            href="/superadmin/admins"
+            className="inline-flex items-center rounded-lg bg-[#1d3a8a] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#16306f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a] focus-visible:ring-offset-2"
+          >
+            Manage Admins
+          </Link>
+        </div>
       </section>
     </main>
   );

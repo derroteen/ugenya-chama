@@ -196,7 +196,36 @@ export default function NewMemberForm({
           disabled={isPending}
           className="inline-flex items-center justify-center rounded-xl bg-[#1d3a8a] px-6 py-3 text-base font-semibold text-white transition hover:bg-[#16306f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isPending ? "Creating member..." : "Create member"}
+          {isPending ? (
+            <>
+              <svg
+                className="mr-2 h-4 w-4 animate-spin"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-hidden="true"
+              >
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="9"
+                  className="opacity-30"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                />
+                <path
+                  d="M21 12a9 9 0 00-9-9"
+                  className="opacity-100"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                />
+              </svg>
+              Creating member...
+            </>
+          ) : (
+            "Create member"
+          )}
         </button>
       </form>
     </section>

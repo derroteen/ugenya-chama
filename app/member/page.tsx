@@ -13,7 +13,7 @@ export default async function MemberDashboardPage() {
 
   const { data: member } = await supabase
     .from("members")
-    .select("member_id, branch_id")
+    .select("member_id, full_name, branch_id")
     .eq("auth_id", user.id)
     .single();
 
@@ -29,9 +29,12 @@ export default async function MemberDashboardPage() {
         <h1 className="text-3xl font-bold tracking-tight text-[#0f1729] [font-family:var(--font-uae-display)] sm:text-4xl">
           Member Dashboard
         </h1>
-        <p className="mt-4 text-lg">Welcome, {member?.member_id ?? "Member"}.</p>
+        <p className="mt-4 text-lg">Welcome, {member?.full_name ?? "Member"}.</p>
         <p className="mt-2 text-base sm:text-lg">
           Branch: {branch?.name ?? "Your branch"}
+        </p>
+        <p className="mt-1 text-sm text-slate-500">
+          Member ID: {member?.member_id ?? "Not assigned"}
         </p>
         <p className="mt-4 max-w-3xl text-base leading-7 sm:text-lg">
           Your contribution history and welfare records will appear here.

@@ -1,24 +1,130 @@
 "use client";
 
-import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { login } from "@/lib/auth/login";
+import { createClient } from "@/lib/supabase/client";
+
+type BranchStatus = "idle" | "loading" | "valid" | "invalid";
+
+interface SelectedBranch {
+  status: BranchStatus;
+  id: string | null;
+  name: string | null;
+}
 
 export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-[#eef2ff] text-[#475569] [font-family:var(--font-uae-sans)]" />
+      }
+    >
+      <LoginPageContent />
+    </Suspense>
+  );
+}
+
+function LoginPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const supabase = useMemo(() => createClient(), []);
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSelectBranchLink, setShowSelectBranchLink] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedBranch, setSelectedBranch] = useState<SelectedBranch>({
+    status: "idle",
+    id: null,
+    name: null,
+  });
+
+  const branchCode = searchParams.get("branch")?.trim().toUpperCase() ?? "";
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadBranch() {
+      if (!branchCode) {
+        if (isActive) {
+          setSelectedBranch({ status: "idle", id: null, name: null });
+        }
+        return;
+      }
+
+      setSelectedBranch({ status: "loading", id: null, name: null });
+
+      const { data, error: branchError } = await supabase
+        .from("branches")
+        .select("id, name")
+        .eq("code", branchCode)
+        .maybeSingle();
+
+      if (!isActive) return;
+
+      if (branchError || !data) {
+        setSelectedBranch({ status: "invalid", id: null, name: null });
+        return;
+      }
+
+      setSelectedBranch({ status: "valid", id: data.id, name: data.name });
+    }
+
+    void loadBranch();
+
+    return () => {
+      isActive = false;
+    };
+  }, [branchCode, supabase]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setShowSelectBranchLink(false);
+
+    if (branchCode && selectedBranch.status === "invalid") {
+      setError("Branch not recognized - please go back and select your branch");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      await login(identifier, password);
+      const { profile } = await login(identifier, password);
+
+      if (!branchCode && profile?.role === "member") {
+        await supabase.auth.signOut();
+        setError(
+          "This login is for administrators. Members should log in via the branch selection page."
+        );
+        setShowSelectBranchLink(true);
+        return;
+      }
+
+      if (branchCode && profile?.role !== "member") {
+        await supabase.auth.signOut();
+        setError(
+          "This login is for members. Administrators should use the direct admin login link."
+        );
+        return;
+      }
+
+      if (
+        branchCode &&
+        profile?.role === "member" &&
+        selectedBranch.id &&
+        profile.branch_id !== selectedBranch.id
+      ) {
+        await supabase.auth.signOut();
+        setError(
+          "This Member ID belongs to a different branch. Please go back and select your correct branch."
+        );
+        return;
+      }
+
       router.refresh();
       router.push("/");
     } catch (err) {
@@ -29,12 +135,21 @@ export default function LoginPage() {
     }
   }
 
+  const branchNotRecognized = branchCode && selectedBranch.status === "invalid";
+  const branchResolving = branchCode && selectedBranch.status === "loading";
+  const branchMismatchBlocked = branchCode && selectedBranch.status !== "valid";
+
   return (
     <main className="min-h-screen bg-[#eef2ff] text-[#475569] [font-family:var(--font-uae-sans)]">
       <div className="mx-auto grid min-h-screen w-full max-w-7xl grid-cols-1 lg:grid-cols-2">
         <section className="flex items-center bg-[#0f1729] px-6 py-12 sm:px-10 lg:px-14 lg:py-16">
           <div className="max-w-xl">
-            <p className="text-6xl font-bold tracking-wide text-white [font-family:var(--font-uae-display)] sm:text-7xl">UAE</p>
+            <Link
+              href="/"
+              className="inline-block text-6xl font-bold tracking-wide text-white [font-family:var(--font-uae-display)] transition hover:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c9a227] sm:text-7xl"
+            >
+              UAE
+            </Link>
             <div className="mt-3 h-0.5 w-24 bg-[#c9a227]" aria-hidden="true" />
             <p className="mt-4 text-lg font-semibold text-[#e2e8f0]">Ugenya Association Eldoret</p>
             <p className="mt-2 text-lg italic text-[#c9a227]">Riwruok Eteko</p>
@@ -51,12 +166,38 @@ export default function LoginPage() {
               Sign in with your Member ID or email and password.
             </p>
 
+            {branchCode && selectedBranch.status === "valid" ? (
+              <div className="mt-5 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-base text-blue-800">
+                Logging in to: <span className="font-semibold">{selectedBranch.name}</span>
+              </div>
+            ) : null}
+
+            {branchCode && selectedBranch.status === "loading" ? (
+              <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-base text-slate-700">
+                Checking selected branch...
+              </div>
+            ) : null}
+
+            {branchNotRecognized ? (
+              <div className="mt-5 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-base text-amber-900">
+                Branch not recognized - please go back and select your branch
+              </div>
+            ) : null}
+
             {error ? (
               <div
                 role="alert"
                 className="mt-5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-base text-rose-700"
               >
-                {error}
+                <p>{error}</p>
+                {showSelectBranchLink ? (
+                  <Link
+                    href="/select-branch"
+                    className="mt-3 inline-flex text-sm font-semibold text-[#1d3a8a] underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a]"
+                  >
+                    Go to branch selection
+                  </Link>
+                ) : null}
               </div>
             ) : null}
 
@@ -147,7 +288,7 @@ export default function LoginPage() {
 
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || Boolean(branchMismatchBlocked)}
                 className="inline-flex w-full items-center justify-center rounded-xl bg-[#1d3a8a] px-5 py-3.5 text-lg font-semibold text-white transition hover:bg-[#16306f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isLoading ? (
@@ -182,6 +323,32 @@ export default function LoginPage() {
                 )}
               </button>
             </form>
+
+            <div className="mt-5 space-y-2">
+              {branchCode ? (
+                <>
+                  <Link
+                    href="/select-branch"
+                    className="block text-sm font-medium text-[#1d3a8a] underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a]"
+                  >
+                    Wrong branch? Select a different one
+                  </Link>
+                  <Link
+                    href="/login"
+                    className="block text-sm font-medium text-[#1d3a8a] underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a]"
+                  >
+                    Admin? Login here
+                  </Link>
+                </>
+              ) : (
+                <Link
+                  href="/select-branch"
+                  className="block text-sm font-medium text-[#1d3a8a] underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a]"
+                >
+                  Are you a member? Select your branch to log in
+                </Link>
+              )}
+            </div>
           </div>
         </section>
       </div>

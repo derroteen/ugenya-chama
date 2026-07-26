@@ -1,5 +1,7 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Lora, Source_Sans_3 } from "next/font/google";
+import PublicHeader from "./components/PublicHeader";
 
 const displayFont = Lora({
   subsets: ["latin"],
@@ -31,65 +33,7 @@ export default function Home() {
 
   return (
     <main className={`${bodyFont.className} min-h-screen bg-white text-[#475569]`}>
-      <header id="home" className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-5 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-1">
-            <div className="flex flex-wrap items-end gap-3">
-              <p className={`${displayFont.className} text-3xl font-bold tracking-wide text-[#0f1729]`}>
-                UAE
-              </p>
-              <p className="pb-1 text-sm text-[#0f1729]">Ugenya Association Eldoret</p>
-            </div>
-            <div className="h-0.5 w-20 bg-[#c9a227]" aria-hidden="true" />
-            <p className="text-sm italic text-[#c9a227]">Riwruok Eteko</p>
-          </div>
-
-          <nav aria-label="Primary" className="border-t border-slate-100 pt-3">
-            <ul className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm font-semibold text-[#0f1729]">
-              <li>
-                <a
-                  href="#home"
-                  className="rounded-sm px-1 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a]"
-                >
-                  Home
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#about"
-                  className="rounded-sm px-1 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a]"
-                >
-                  About
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#branches"
-                  className="rounded-sm px-1 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a]"
-                >
-                  Branches
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#membership"
-                  className="rounded-sm px-1 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a]"
-                >
-                  Membership
-                </a>
-              </li>
-              <li>
-                <Link
-                  href="/login"
-                  className="rounded-sm px-1 py-0.5 text-[#1d3a8a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a]"
-                >
-                  Login
-                </Link>
-              </li>
-            </ul>
-          </nav>
-        </div>
-      </header>
+      <PublicHeader brandClassName={displayFont.className} />
 
       <section className="relative isolate overflow-hidden bg-white">
         <div className="pointer-events-none absolute inset-0 opacity-70" aria-hidden="true">
