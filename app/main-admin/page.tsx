@@ -149,7 +149,7 @@ export default async function MainAdminDashboardPage() {
           <h2 className="text-2xl font-semibold text-[#0f1729] [font-family:var(--font-uae-display)]">Quick Actions</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <Link
-              href="/branch-admin/members"
+              href="/main-admin/members"
               className="rounded-xl border border-[#1d3a8a]/20 bg-[#f8fbff] px-5 py-5 transition hover:border-[#1d3a8a]/40 hover:shadow-sm"
             >
               <p className="text-lg font-semibold text-[#0f1729]">View All Members</p>
@@ -157,11 +157,11 @@ export default async function MainAdminDashboardPage() {
             </Link>
 
             <Link
-              href="#"
+              href="/main-admin/sheets"
               className="rounded-xl border border-[#1d3a8a]/20 bg-[#f8fbff] px-5 py-5 transition hover:border-[#1d3a8a]/40 hover:shadow-sm"
             >
-              <p className="text-lg font-semibold text-[#0f1729]">View Branches</p>
-              <p className="mt-1 text-sm text-slate-600">Branch management page coming next.</p>
+              <p className="text-lg font-semibold text-[#0f1729]">Open Contribution Sheets</p>
+              <p className="mt-1 text-sm text-slate-600">Record monthly and emergency sheet values by branch.</p>
             </Link>
           </div>
         </section>
@@ -189,7 +189,7 @@ export default async function MainAdminDashboardPage() {
                     <tr key={member.id} className="hover:bg-slate-50/70">
                       <td className="px-4 py-3 text-sm font-medium text-[#0f1729] sm:px-6">
                         <Link
-                          href={`/branch-admin/members/${member.id}`}
+                          href={`/main-admin/members/${member.id}`}
                           className="underline-offset-2 transition hover:text-[#1d3a8a] hover:underline"
                         >
                           {member.full_name}

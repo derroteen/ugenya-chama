@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 
-type AdminRole = "superadmin" | "main_admin" | "branch_admin";
+type AdminRole = "superadmin" | "main_admin";
 
 interface AdminProfileRow {
   id: string;
@@ -27,16 +27,12 @@ function roleBadgeClasses(role: AdminRole) {
   if (role === "superadmin") {
     return "border border-amber-300 bg-amber-50 text-amber-900";
   }
-  if (role === "main_admin") {
-    return "border border-[#1d3a8a]/30 bg-[#eaf1ff] text-[#1d3a8a]";
-  }
-  return "border border-slate-300 bg-slate-100 text-slate-800";
+  return "border border-[#1d3a8a]/30 bg-[#eaf1ff] text-[#1d3a8a]";
 }
 
 function roleLabel(role: AdminRole) {
   if (role === "superadmin") return "Superadmin";
-  if (role === "main_admin") return "Main Admin";
-  return "Branch Admin";
+  return "Main Admin";
 }
 
 function formatDate(value: string) {
@@ -64,7 +60,7 @@ export default async function SuperadminAdminsPage() {
   const { data: admins } = await supabase
     .from("profiles")
     .select("id, full_name, email, role, branch_id, created_at, branches(name)")
-    .in("role", ["superadmin", "main_admin", "branch_admin"])
+    .in("role", ["superadmin", "main_admin"])
     .order("role", { ascending: true })
     .order("full_name", { ascending: true });
 

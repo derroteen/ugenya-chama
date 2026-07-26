@@ -14,10 +14,10 @@ create table if not exists branches (
 );
 
 -- ---------- 2. PROFILES (linked 1:1 to auth.users) ----------
--- role: 'superadmin' | 'main_admin' | 'branch_admin' | 'member'
+-- role: 'superadmin' | 'main_admin' | 'member'
 create table if not exists profiles (
   id uuid primary key references auth.users(id) on delete cascade,
-  role text not null check (role in ('superadmin','main_admin','branch_admin','member')),
+  role text not null check (role in ('superadmin','main_admin','member')),
   branch_id uuid references branches(id),   -- null for superadmin / main_admin
   full_name text,
   email text,                                -- convenience copy of auth.users.email, set at creation
@@ -36,11 +36,14 @@ create table if not exists members (
   full_name text not null,
   phone text not null,
   id_number text,                 -- national ID, optional but useful for chamas
+  kbg_shares_bf numeric(12,2),
   must_change_password boolean not null default true,
   status text not null default 'active' check (status in ('active','inactive','suspended')),
   created_by uuid references auth.users(id),
   created_at timestamptz not null default now()
 );
+
+alter table members add column if not exists kbg_shares_bf numeric(12,2);
 
 create index if not exists idx_members_branch on members(branch_id);
 
@@ -57,7 +60,7 @@ on conflict (id) do nothing;
 -- branch_id param is accepted (and can be used later for reporting) but no longer
 -- affects the ID format itself.
 -- SECURITY DEFINER is required here: member_id_counter's RLS policy only allows
--- superadmin direct writes, but branch_admin/main_admin need to trigger this
+-- superadmin direct writes, but main_admin users can still trigger this
 -- function when creating members. Running as the function's definer bypasses
 -- that restriction safely, since the function only ever increments by exactly 1.
 create or replace function generate_member_id(p_branch_id uuid default null)
@@ -140,12 +143,11 @@ create policy "profiles_superadmin_write" on profiles
   with check (my_role() = 'superadmin');
 
 -- ---------- Members ----------
--- superadmin + main_admin: see all. branch_admin: only their branch. member: only their own row.
+-- superadmin + main_admin: see all. member: only their own row.
 drop policy if exists "members_select" on members;
 create policy "members_select" on members
   for select using (
     my_role() in ('superadmin','main_admin')
-    or (my_role() = 'branch_admin' and branch_id = my_branch())
     or auth_id = auth.uid()
   );
 
@@ -153,14 +155,12 @@ drop policy if exists "members_insert" on members;
 create policy "members_insert" on members
   for insert with check (
     my_role() in ('superadmin','main_admin')
-    or (my_role() = 'branch_admin' and branch_id = my_branch())
   );
 
 drop policy if exists "members_update" on members;
 create policy "members_update" on members
   for update using (
     my_role() in ('superadmin','main_admin')
-    or (my_role() = 'branch_admin' and branch_id = my_branch())
   );
 
 -- ---------- Contributions ----------
@@ -168,7 +168,6 @@ drop policy if exists "contrib_select" on contributions;
 create policy "contrib_select" on contributions
   for select using (
     my_role() in ('superadmin','main_admin')
-    or (my_role() = 'branch_admin' and branch_id = my_branch())
     or member_id in (select id from members where auth_id = auth.uid())
   );
 
@@ -176,7 +175,6 @@ drop policy if exists "contrib_insert" on contributions;
 create policy "contrib_insert" on contributions
   for insert with check (
     my_role() in ('superadmin','main_admin')
-    or (my_role() = 'branch_admin' and branch_id = my_branch())
   );
 
 -- ---------- member_id_counter: only touched via the SECURITY DEFINER function ----------
@@ -291,7 +289,7 @@ create index if not exists idx_funeral_contrib_branch on funeral_contributions(b
 -- ============================================================
 -- RLS: extended member records + passbook
 -- (same access pattern as members/contributions above: superadmin + main_admin
--- see everything, branch_admin scoped to their branch, member sees only their own)
+-- see everything, member sees only their own)
 -- ============================================================
 
 alter table member_family_details enable row level security;
@@ -305,9 +303,6 @@ drop policy if exists "family_details_select" on member_family_details;
 create policy "family_details_select" on member_family_details
   for select using (
     my_role() in ('superadmin','main_admin')
-    or (my_role() = 'branch_admin' and member_id in (
-      select id from members where branch_id = my_branch()
-    ))
     or member_id in (select id from members where auth_id = auth.uid())
   );
 
@@ -315,15 +310,9 @@ drop policy if exists "family_details_write" on member_family_details;
 create policy "family_details_write" on member_family_details
   for all using (
     my_role() in ('superadmin','main_admin')
-    or (my_role() = 'branch_admin' and member_id in (
-      select id from members where branch_id = my_branch()
-    ))
   )
   with check (
     my_role() in ('superadmin','main_admin')
-    or (my_role() = 'branch_admin' and member_id in (
-      select id from members where branch_id = my_branch()
-    ))
   );
 
 -- ---------- member_children ----------
@@ -331,9 +320,6 @@ drop policy if exists "children_select" on member_children;
 create policy "children_select" on member_children
   for select using (
     my_role() in ('superadmin','main_admin')
-    or (my_role() = 'branch_admin' and member_id in (
-      select id from members where branch_id = my_branch()
-    ))
     or member_id in (select id from members where auth_id = auth.uid())
   );
 
@@ -341,15 +327,9 @@ drop policy if exists "children_write" on member_children;
 create policy "children_write" on member_children
   for all using (
     my_role() in ('superadmin','main_admin')
-    or (my_role() = 'branch_admin' and member_id in (
-      select id from members where branch_id = my_branch()
-    ))
   )
   with check (
     my_role() in ('superadmin','main_admin')
-    or (my_role() = 'branch_admin' and member_id in (
-      select id from members where branch_id = my_branch()
-    ))
   );
 
 -- ---------- member_beneficiary_declarations ----------
@@ -357,9 +337,6 @@ drop policy if exists "beneficiary_select" on member_beneficiary_declarations;
 create policy "beneficiary_select" on member_beneficiary_declarations
   for select using (
     my_role() in ('superadmin','main_admin')
-    or (my_role() = 'branch_admin' and member_id in (
-      select id from members where branch_id = my_branch()
-    ))
     or member_id in (select id from members where auth_id = auth.uid())
   );
 
@@ -367,15 +344,9 @@ drop policy if exists "beneficiary_write" on member_beneficiary_declarations;
 create policy "beneficiary_write" on member_beneficiary_declarations
   for all using (
     my_role() in ('superadmin','main_admin')
-    or (my_role() = 'branch_admin' and member_id in (
-      select id from members where branch_id = my_branch()
-    ))
   )
   with check (
     my_role() in ('superadmin','main_admin')
-    or (my_role() = 'branch_admin' and member_id in (
-      select id from members where branch_id = my_branch()
-    ))
   );
 
 -- ---------- monthly_contributions ----------
@@ -383,7 +354,6 @@ drop policy if exists "monthly_contrib_select" on monthly_contributions;
 create policy "monthly_contrib_select" on monthly_contributions
   for select using (
     my_role() in ('superadmin','main_admin')
-    or (my_role() = 'branch_admin' and branch_id = my_branch())
     or member_id in (select id from members where auth_id = auth.uid())
   );
 
@@ -391,7 +361,6 @@ drop policy if exists "monthly_contrib_insert" on monthly_contributions;
 create policy "monthly_contrib_insert" on monthly_contributions
   for insert with check (
     my_role() in ('superadmin','main_admin')
-    or (my_role() = 'branch_admin' and branch_id = my_branch())
   );
 
 -- ---------- funeral_contributions ----------
@@ -399,7 +368,6 @@ drop policy if exists "funeral_contrib_select" on funeral_contributions;
 create policy "funeral_contrib_select" on funeral_contributions
   for select using (
     my_role() in ('superadmin','main_admin')
-    or (my_role() = 'branch_admin' and branch_id = my_branch())
     or member_id in (select id from members where auth_id = auth.uid())
   );
 
@@ -407,8 +375,73 @@ drop policy if exists "funeral_contrib_insert" on funeral_contributions;
 create policy "funeral_contrib_insert" on funeral_contributions
   for insert with check (
     my_role() in ('superadmin','main_admin')
-    or (my_role() = 'branch_admin' and branch_id = my_branch())
   );
+
+-- ============================================================
+-- SHEET-BASED CONTRIBUTIONS
+-- ============================================================
+
+create table if not exists monthly_savings (
+  id uuid primary key default gen_random_uuid(),
+  branch_id uuid not null references branches(id) on delete cascade,
+  member_id uuid not null references members(id) on delete cascade,
+  month text not null,
+  old_savings_bf numeric(12,2) not null default 0,
+  previous_balance_bf numeric(12,2) not null default 0,
+  subs numeric(12,2) not null default 0 check (subs >= 0),
+  cumulative_saving numeric(12,2) not null default 0,
+  created_by uuid references auth.users(id),
+  created_at timestamptz not null default now(),
+  unique (branch_id, member_id, month)
+);
+
+create index if not exists idx_monthly_savings_branch_month on monthly_savings(branch_id, month);
+create index if not exists idx_monthly_savings_member on monthly_savings(member_id);
+
+create table if not exists emergency_contributions (
+  id uuid primary key default gen_random_uuid(),
+  branch_id uuid not null references branches(id) on delete cascade,
+  member_id uuid not null references members(id) on delete cascade,
+  month text not null,
+  previous_emerg_bf numeric(12,2) not null default 0,
+  emerg_subs numeric(12,2) not null default 0 check (emerg_subs >= 0),
+  cumulative_emerg_fund numeric(12,2) not null default 0,
+  withdrawal numeric(12,2) not null default 0 check (withdrawal >= 0),
+  emergency_balance numeric(12,2) not null default 0,
+  created_by uuid references auth.users(id),
+  created_at timestamptz not null default now(),
+  unique (branch_id, member_id, month)
+);
+
+create index if not exists idx_emerg_contrib_branch_month on emergency_contributions(branch_id, month);
+create index if not exists idx_emerg_contrib_member on emergency_contributions(member_id);
+
+alter table monthly_savings enable row level security;
+alter table emergency_contributions enable row level security;
+
+drop policy if exists "monthly_savings_select" on monthly_savings;
+create policy "monthly_savings_select" on monthly_savings
+  for select using (
+    my_role() in ('superadmin','main_admin')
+    or member_id in (select id from members where auth_id = auth.uid())
+  );
+
+drop policy if exists "monthly_savings_write" on monthly_savings;
+create policy "monthly_savings_write" on monthly_savings
+  for all using (my_role() in ('superadmin','main_admin'))
+  with check (my_role() in ('superadmin','main_admin'));
+
+drop policy if exists "emerg_sheets_select" on emergency_contributions;
+create policy "emerg_sheets_select" on emergency_contributions
+  for select using (
+    my_role() in ('superadmin','main_admin')
+    or member_id in (select id from members where auth_id = auth.uid())
+  );
+
+drop policy if exists "emerg_sheets_write" on emergency_contributions;
+create policy "emerg_sheets_write" on emergency_contributions
+  for all using (my_role() in ('superadmin','main_admin'))
+  with check (my_role() in ('superadmin','main_admin'));
 -- (code is an internal short reference only - it no longer appears
 -- in member_id, which is now a single global UAE001-style sequence)
 -- ============================================================

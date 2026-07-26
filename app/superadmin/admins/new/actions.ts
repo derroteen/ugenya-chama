@@ -4,7 +4,7 @@ import { randomInt } from "crypto";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import type { NewAdminRole, NewAdminFormState } from "./form-state";
 
-const ALLOWED_ROLES: NewAdminRole[] = ["main_admin", "branch_admin"];
+const ALLOWED_ROLES: NewAdminRole[] = ["main_admin"];
 
 function isAllowedRole(value: string): value is NewAdminRole {
   return ALLOWED_ROLES.includes(value as NewAdminRole);
@@ -68,36 +68,12 @@ export async function createAdminAccount(formData: FormData) {
   const fullName = String(formData.get("fullName") ?? "").trim();
   const email = normalizeEmail(String(formData.get("email") ?? ""));
   const roleInput = String(formData.get("role") ?? "").trim();
-  const requestedBranchId = String(formData.get("branchId") ?? "").trim();
-
   if (!fullName || !email || !roleInput) {
     throw new Error("Full Name, Email, and Role are required.");
   }
 
   if (!isAllowedRole(roleInput)) {
-    throw new Error("Role must be either main_admin or branch_admin.");
-  }
-
-  let branchId: string | null = null;
-  let branchName = "-";
-
-  if (roleInput === "branch_admin") {
-    if (!requestedBranchId) {
-      throw new Error("Branch is required when assigning the Branch Admin role.");
-    }
-
-    const { data: branch, error: branchError } = await supabase
-      .from("branches")
-      .select("id, name")
-      .eq("id", requestedBranchId)
-      .single();
-
-    if (branchError || !branch) {
-      throw new Error("The selected branch could not be found.");
-    }
-
-    branchId = branch.id;
-    branchName = branch.name;
+    throw new Error("Role must be main_admin.");
   }
 
   const generatedPassword = generateSecurePassword(12);
@@ -118,7 +94,7 @@ export async function createAdminAccount(formData: FormData) {
   const { error: profileInsertError } = await admin.from("profiles").insert({
     id: newUserId,
     role: roleInput,
-    branch_id: roleInput === "branch_admin" ? branchId : null,
+    branch_id: null,
     full_name: fullName,
     email,
   });
@@ -132,7 +108,7 @@ export async function createAdminAccount(formData: FormData) {
     email,
     generatedPassword,
     role: roleInput,
-    branchName,
+    branchName: "-",
   };
 }
 
@@ -143,13 +119,11 @@ export async function createAdminAccountAction(
   const fullName = String(formData.get("fullName") ?? "").trim();
   const email = normalizeEmail(String(formData.get("email") ?? ""));
   const roleInput = String(formData.get("role") ?? "").trim();
-  const branchId = String(formData.get("branchId") ?? "").trim();
-
   const defaults = {
     fullName,
     email,
     role: isAllowedRole(roleInput) ? roleInput : "main_admin",
-    branchId,
+    branchId: "",
   };
 
   try {

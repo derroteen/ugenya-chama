@@ -1,14 +1,14 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-type Role = 'superadmin' | 'main_admin' | 'branch_admin' | 'member'
+type Role = 'superadmin' | 'main_admin' | 'member'
 
 const protectedRouteRoles: Array<{ prefix: string; allowedRoles: Role[] }> = [
   { prefix: '/superadmin', allowedRoles: ['superadmin'] },
   { prefix: '/main-admin', allowedRoles: ['superadmin', 'main_admin'] },
-  { prefix: '/branch-admin', allowedRoles: ['superadmin', 'main_admin', 'branch_admin'] },
+  { prefix: '/branch-admin', allowedRoles: ['superadmin', 'main_admin'] },
   { prefix: '/member', allowedRoles: ['member'] },
-  { prefix: '/settings', allowedRoles: ['superadmin', 'main_admin', 'branch_admin', 'member'] },
+  { prefix: '/settings', allowedRoles: ['superadmin', 'main_admin', 'member'] },
 ]
 
 function matchesPrefix(pathname: string, prefix: string) {
@@ -22,7 +22,6 @@ function findProtectedRoute(pathname: string) {
 function roleHome(role: Role | null | undefined) {
   if (role === 'superadmin') return '/superadmin'
   if (role === 'main_admin') return '/main-admin'
-  if (role === 'branch_admin') return '/branch-admin'
   if (role === 'member') return '/member'
   return '/'
 }

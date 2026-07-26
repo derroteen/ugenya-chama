@@ -9,8 +9,8 @@ interface CreateMemberInput {
 }
 
 /**
- * Called from a server action / route handler when a branch_admin,
- * main_admin, or superadmin adds a new member.
+ * Called from a server action / route handler when a main_admin
+ * or superadmin adds a new member.
  * The caller's own Supabase session (via createClient) is used first
  * to enforce RLS + confirm the caller is allowed to write to this branch.
  * The admin client is only used for the auth.users insert, which RLS can't cover.

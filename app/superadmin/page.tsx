@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 
-type AdminRole = "main_admin" | "branch_admin";
+type AdminRole = "main_admin";
 
 function formatKsh(value: number) {
   return `KSH ${new Intl.NumberFormat("en-KE", {
@@ -28,8 +28,8 @@ function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function roleLabel(role: AdminRole) {
-  return role === "main_admin" ? "Main Admin" : "Branch Admin";
+function roleLabel(_role: AdminRole) {
+  return "Main Admin";
 }
 
 function getJoinedBranchName(
@@ -79,7 +79,7 @@ export default async function SuperadminDashboardPage() {
       supabase
         .from("profiles")
         .select("id", { count: "exact", head: true })
-        .in("role", ["main_admin", "branch_admin"]),
+        .in("role", ["main_admin"]),
       supabase
         .from("monthly_contributions")
         .select("amount")
@@ -88,7 +88,7 @@ export default async function SuperadminDashboardPage() {
       supabase
         .from("profiles")
         .select("id, full_name, role, created_at, branches(name)")
-        .in("role", ["main_admin", "branch_admin"])
+        .in("role", ["main_admin"])
         .order("created_at", { ascending: false })
         .limit(5),
     ]);
@@ -154,7 +154,7 @@ export default async function SuperadminDashboardPage() {
             </Link>
 
             <Link
-              href="/branch-admin/members"
+              href="/main-admin/members"
               className="rounded-xl border border-[#1d3a8a]/20 bg-[#f8fbff] px-5 py-5 transition hover:border-[#1d3a8a]/40 hover:shadow-sm"
             >
               <p className="text-lg font-semibold text-[#0f1729]">View All Members</p>

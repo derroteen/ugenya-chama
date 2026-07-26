@@ -5,14 +5,14 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-type Role = "superadmin" | "main_admin" | "branch_admin" | "member";
+type Role = "superadmin" | "main_admin" | "member";
 
 type NavLink = {
   label: string;
   href: string;
 };
 
-type IconName = "dashboard" | "member-add" | "admins" | "branches" | "members" | "settings";
+type IconName = "dashboard" | "admins" | "branches" | "members" | "settings";
 
 type NavLinkConfig = NavLink & {
   icon: IconName;
@@ -21,20 +21,15 @@ type NavLinkConfig = NavLink & {
 const roleLinks: Record<Role, NavLinkConfig[]> = {
   superadmin: [
     { label: "Dashboard", href: "/superadmin", icon: "dashboard" },
-    { label: "Members", href: "/branch-admin/members", icon: "members" },
+    { label: "Members", href: "/main-admin/members", icon: "members" },
     { label: "Manage Admins", href: "/superadmin/admins", icon: "admins" },
     { label: "Settings", href: "/settings", icon: "settings" },
   ],
   main_admin: [
     { label: "Dashboard", href: "/main-admin", icon: "dashboard" },
-    { label: "Members", href: "/branch-admin/members", icon: "members" },
+    { label: "Members", href: "/main-admin/members", icon: "members" },
+    { label: "Contribution Sheets", href: "/main-admin/sheets", icon: "branches" },
     { label: "Branches", href: "/main-admin/branches", icon: "branches" },
-    { label: "Settings", href: "/settings", icon: "settings" },
-  ],
-  branch_admin: [
-    { label: "Dashboard", href: "/branch-admin", icon: "dashboard" },
-    { label: "Members", href: "/branch-admin/members", icon: "members" },
-    { label: "Add Member", href: "/branch-admin/members/new", icon: "member-add" },
     { label: "Settings", href: "/settings", icon: "settings" },
   ],
   member: [
@@ -45,7 +40,6 @@ const roleLinks: Record<Role, NavLinkConfig[]> = {
 
 const roleSubtitles: Record<Role, string> = {
   member: "MEMBERS PORTAL",
-  branch_admin: "BRANCH ADMIN PORTAL",
   main_admin: "MAIN ADMIN PORTAL",
   superadmin: "SUPERADMIN PORTAL",
 };
@@ -54,7 +48,6 @@ function isRole(value: string | null | undefined): value is Role {
   return (
     value === "superadmin" ||
     value === "main_admin" ||
-    value === "branch_admin" ||
     value === "member"
   );
 }
@@ -68,23 +61,6 @@ function getAvatarText(displayName: string) {
 }
 
 function NavIcon({ icon }: { icon: IconName }) {
-  if (icon === "member-add") {
-    return (
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        className="h-5 w-5"
-        aria-hidden="true"
-      >
-        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19a6 6 0 10-12 0" />
-        <circle cx="9" cy="7" r="4" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M19 8v6M16 11h6" />
-      </svg>
-    );
-  }
 
   if (icon === "admins") {
     return (

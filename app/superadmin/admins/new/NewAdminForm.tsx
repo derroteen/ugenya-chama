@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { createAdminAccountAction } from "./actions";
-import type { NewAdminFormState, NewAdminRole } from "./form-state";
+import type { NewAdminFormState } from "./form-state";
 
 interface BranchOption {
   id: string;
@@ -14,13 +14,11 @@ interface NewAdminFormProps {
   initialState: NewAdminFormState;
 }
 
-export default function NewAdminForm({ branchOptions, initialState }: NewAdminFormProps) {
+export default function NewAdminForm({ branchOptions: _branchOptions, initialState }: NewAdminFormProps) {
   const [state, formAction, isPending] = useActionState(createAdminAccountAction, initialState);
   const [showSuccess, setShowSuccess] = useState(false);
   const [copiedField, setCopiedField] = useState<"email" | "password" | null>(null);
   const [resetVersion, setResetVersion] = useState(0);
-  const formDefaultRole: NewAdminRole = state.defaults?.role ?? "main_admin";
-  const [selectedRole, setSelectedRole] = useState<NewAdminRole>(formDefaultRole);
 
   useEffect(() => {
     if (state.status === "success") {
@@ -28,21 +26,6 @@ export default function NewAdminForm({ branchOptions, initialState }: NewAdminFo
       setCopiedField(null);
     }
   }, [state.status]);
-
-  useEffect(() => {
-    setSelectedRole(formDefaultRole);
-  }, [formDefaultRole]);
-
-  const showBranchField = selectedRole === "branch_admin";
-
-  const selectedBranchName = useMemo(() => {
-    if (!showBranchField) return "-";
-    const selectedBranchId = state.defaults?.branchId;
-    if (!selectedBranchId) return "Selected branch";
-
-    const found = branchOptions.find((branch) => branch.id === selectedBranchId);
-    return found?.name ?? "Selected branch";
-  }, [branchOptions, showBranchField, state.defaults?.branchId]);
 
   async function handleCopy(value: string, field: "email" | "password") {
     try {
@@ -60,10 +43,7 @@ export default function NewAdminForm({ branchOptions, initialState }: NewAdminFo
           Admin Account Created
         </h2>
         <p className="mt-3 text-base text-emerald-800 sm:text-lg">
-          Role assigned: <span className="font-semibold">{state.role === "branch_admin" ? "Branch Admin" : "Main Admin"}</span>
-        </p>
-        <p className="mt-1 text-base text-emerald-800 sm:text-lg">
-          Branch: <span className="font-semibold">{state.branchName ?? selectedBranchName}</span>
+          Role assigned: <span className="font-semibold">Main Admin</span>
         </p>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -106,15 +86,13 @@ export default function NewAdminForm({ branchOptions, initialState }: NewAdminFo
             setShowSuccess(false);
             setResetVersion((value) => value + 1);
           }}
-          className="mt-6 inline-flex items-center justify-center rounded-lg border border-[#1d3a8a] bg-white px-5 py-2.5 text-sm font-semibold text-[#1d3a8a] transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a] focus-visible:ring-offset-2"
+          className="mt-6 inline-flex items-center justify-center rounded-lg border border-[#1d3a8a] bg-white px-5 py-2.5 text-sm font-semibold text-[#1d3a8a] transition hover:bg-slate-50"
         >
           Add another admin
         </button>
       </section>
     );
   }
-
-  const branchSelectDefault = state.defaults?.branchId || branchOptions[0]?.id || "";
 
   return (
     <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
@@ -158,84 +136,15 @@ export default function NewAdminForm({ branchOptions, initialState }: NewAdminFo
           />
         </div>
 
-        <div>
-          <label htmlFor="role" className="mb-2 block text-base font-semibold text-[#0f1729]">
-            Role
-          </label>
-          <select
-            id="role"
-            name="role"
-            required
-            defaultValue={formDefaultRole}
-            onChange={(event) => setSelectedRole(event.target.value as NewAdminRole)}
-            className="block w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-lg text-slate-900 outline-none transition focus:border-[#1d3a8a] focus:ring-2 focus:ring-[#bfdbfe]"
-          >
-            <option value="main_admin">Main Admin</option>
-            <option value="branch_admin">Branch Admin</option>
-          </select>
-        </div>
-
-        {showBranchField ? (
-          <div>
-            <label htmlFor="branchId" className="mb-2 block text-base font-semibold text-[#0f1729]">
-              Branch
-            </label>
-            <select
-              id="branchId"
-              name="branchId"
-              required
-              defaultValue={branchSelectDefault}
-              className="block w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-lg text-slate-900 outline-none transition focus:border-[#1d3a8a] focus:ring-2 focus:ring-[#bfdbfe]"
-            >
-              <option value="" disabled>
-                Select branch
-              </option>
-              {branchOptions.map((branch) => (
-                <option key={branch.id} value={branch.id}>
-                  {branch.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        ) : (
-          <input type="hidden" name="branchId" value="" />
-        )}
+        <input type="hidden" name="role" value="main_admin" />
+        <input type="hidden" name="branchId" value="" />
 
         <button
           type="submit"
           disabled={isPending}
-          className="inline-flex items-center justify-center rounded-xl bg-[#1d3a8a] px-6 py-3 text-base font-semibold text-white transition hover:bg-[#16306f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex items-center justify-center rounded-xl bg-[#1d3a8a] px-6 py-3 text-base font-semibold text-white transition hover:bg-[#16306f] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isPending ? (
-            <>
-              <svg
-                className="mr-2 h-4 w-4 animate-spin"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                aria-hidden="true"
-              >
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="9"
-                  className="opacity-30"
-                  stroke="currentColor"
-                  strokeWidth="3"
-                />
-                <path
-                  d="M21 12a9 9 0 00-9-9"
-                  className="opacity-100"
-                  stroke="currentColor"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                />
-              </svg>
-              Creating admin account...
-            </>
-          ) : (
-            "Create admin account"
-          )}
+          {isPending ? "Creating..." : "Create Main Admin"}
         </button>
       </form>
     </section>

@@ -1,4 +1,4 @@
-export type NewAdminRole = "main_admin" | "branch_admin";
+export type NewAdminRole = "main_admin";
 
 export interface NewAdminFormState {
   status: "idle" | "error" | "success";
