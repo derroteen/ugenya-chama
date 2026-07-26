@@ -20,6 +20,7 @@ create table if not exists profiles (
   role text not null check (role in ('superadmin','main_admin','branch_admin','member')),
   branch_id uuid references branches(id),   -- null for superadmin / main_admin
   full_name text,
+  email text,                                -- convenience copy of auth.users.email, set at creation
   created_at timestamptz not null default now()
 );
 
@@ -132,10 +133,10 @@ language sql stable security definer as $$
   select branch_id from profiles where id = auth.uid();
 $$;
 
--- ---------- Branches: everyone logged in can read branch names ----------
+-- ---------- Branches: publicly readable (needed for the pre-login branch picker) ----------
 drop policy if exists "branches_read_all" on branches;
 create policy "branches_read_all" on branches
-  for select using (auth.uid() is not null);
+  for select using (true);
 
 drop policy if exists "branches_write_superadmin" on branches;
 create policy "branches_write_superadmin" on branches
