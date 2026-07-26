@@ -96,20 +96,7 @@ create table if not exists contributions (
 create index if not exists idx_contrib_branch on contributions(branch_id);
 create index if not exists idx_contrib_member on contributions(member_id);
 
--- ---------- 5. LOANS (example, extend as needed) ----------
-create table if not exists loans (
-  id uuid primary key default gen_random_uuid(),
-  member_id uuid not null references members(id),
-  branch_id uuid not null references branches(id),
-  principal numeric(12,2) not null,
-  balance numeric(12,2) not null,
-  status text not null default 'active' check (status in ('active','cleared','defaulted')),
-  issued_date date not null default current_date,
-  recorded_by uuid references auth.users(id),
-  created_at timestamptz not null default now()
-);
-
-create index if not exists idx_loans_branch on loans(branch_id);
+-- (No loans table - UAE does not offer loans, only savings/shares and welfare/funeral support.)
 
 -- ============================================================
 -- ROW LEVEL SECURITY
@@ -119,7 +106,6 @@ alter table branches enable row level security;
 alter table profiles enable row level security;
 alter table members enable row level security;
 alter table contributions enable row level security;
-alter table loans enable row level security;
 alter table member_id_counter enable row level security;
 
 -- Helper: get role/branch of the currently logged-in user
@@ -193,29 +179,236 @@ create policy "contrib_insert" on contributions
     or (my_role() = 'branch_admin' and branch_id = my_branch())
   );
 
--- ---------- Loans (same pattern as contributions) ----------
-drop policy if exists "loans_select" on loans;
-create policy "loans_select" on loans
-  for select using (
-    my_role() in ('superadmin','main_admin')
-    or (my_role() = 'branch_admin' and branch_id = my_branch())
-    or member_id in (select id from members where auth_id = auth.uid())
-  );
-
-drop policy if exists "loans_insert" on loans;
-create policy "loans_insert" on loans
-  for insert with check (
-    my_role() in ('superadmin','main_admin')
-    or (my_role() = 'branch_admin' and branch_id = my_branch())
-  );
-
 -- ---------- member_id_counter: only touched via the SECURITY DEFINER function ----------
 drop policy if exists "counter_no_direct_access" on member_id_counter;
 create policy "counter_no_direct_access" on member_id_counter
   for all using (my_role() = 'superadmin');
 
 -- ============================================================
--- SEED: the 12 real UAE branches
+-- EXTENDED MEMBER RECORDS
+-- (from the physical Membership General Record + Beneficiary Declaration forms)
+-- ============================================================
+
+-- ---------- MEMBER FAMILY DETAILS (one row per member) ----------
+create table if not exists member_family_details (
+  member_id uuid primary key references members(id) on delete cascade,
+  marital_status text check (marital_status in ('single','married','widowed')),
+  employment_status text check (employment_status in ('employed','self_employed','unemployed')),
+  occupation text,
+  residential_location text,
+  home_district text,
+  home_location text,
+  home_village text,
+  spouse_name text,
+  spouse_district text,
+  spouse_location text,
+  spouse_sub_location text,
+  spouse_village text,
+  spouse_id_number text,
+  updated_at timestamptz not null default now()
+);
+
+-- ---------- MEMBER CHILDREN (many rows per member) ----------
+create table if not exists member_children (
+  id uuid primary key default gen_random_uuid(),
+  member_id uuid not null references members(id) on delete cascade,
+  full_name text not null,
+  age int,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_children_member on member_children(member_id);
+
+-- ---------- BENEFICIARY / NEXT-OF-KIN DECLARATION (one row per member) ----------
+-- from the "Last Respect" declaration form: parents' status, guardian (if both
+-- parents deceased), and the named beneficiary who would receive death benefits.
+create table if not exists member_beneficiary_declarations (
+  member_id uuid primary key references members(id) on delete cascade,
+
+  father_name text,
+  father_date_of_birth date,
+  father_id_number text,
+  father_status text check (father_status in ('alive','deceased')),
+
+  mother_name text,
+  mother_date_of_birth date,
+  mother_id_number text,
+  mother_status text check (mother_status in ('alive','deceased')),
+
+  -- filled only if both parents are deceased
+  guardian_name text,
+  guardian_date_of_birth date,
+  guardian_id_number text,
+
+  beneficiary_full_name text,
+  beneficiary_date_of_birth date,
+  beneficiary_mobile text,
+  beneficiary_relationship text,
+
+  branch_chair_signed_at timestamptz,
+  branch_secretary_signed_at timestamptz,
+  recorded_by uuid references auth.users(id),
+  updated_at timestamptz not null default now()
+);
+
+-- ============================================================
+-- PASSBOOK: two separate ledgers, matching the physical passbook
+-- ============================================================
+
+-- ---------- MONTHLY CONTRIBUTIONS (shares & dividends ledger) ----------
+create table if not exists monthly_contributions (
+  id uuid primary key default gen_random_uuid(),
+  member_id uuid not null references members(id) on delete cascade,
+  branch_id uuid not null references branches(id),
+  entry_date date not null default current_date,
+  amount numeric(12,2) not null default 0 check (amount >= 0),
+  dividend numeric(12,2) not null default 0,
+  withdrawal numeric(12,2) not null default 0 check (withdrawal >= 0),
+  running_balance numeric(12,2) not null default 0, -- computed and stored at insert time by the app
+  recorded_by uuid references auth.users(id),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_monthly_contrib_member on monthly_contributions(member_id);
+create index if not exists idx_monthly_contrib_branch on monthly_contributions(branch_id);
+
+-- ---------- FUNERAL CONTRIBUTIONS (separate ledger, tied to specific events) ----------
+create table if not exists funeral_contributions (
+  id uuid primary key default gen_random_uuid(),
+  member_id uuid not null references members(id) on delete cascade,
+  branch_id uuid not null references branches(id),        -- the contributing member's branch
+  event_branch_id uuid references branches(id),            -- the branch the funeral event relates to (may differ)
+  entry_date date not null default current_date,
+  event_description text,
+  amount numeric(12,2) not null default 0 check (amount >= 0),
+  recorded_by uuid references auth.users(id),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_funeral_contrib_member on funeral_contributions(member_id);
+create index if not exists idx_funeral_contrib_branch on funeral_contributions(branch_id);
+
+-- ============================================================
+-- RLS: extended member records + passbook
+-- (same access pattern as members/contributions above: superadmin + main_admin
+-- see everything, branch_admin scoped to their branch, member sees only their own)
+-- ============================================================
+
+alter table member_family_details enable row level security;
+alter table member_children enable row level security;
+alter table member_beneficiary_declarations enable row level security;
+alter table monthly_contributions enable row level security;
+alter table funeral_contributions enable row level security;
+
+-- ---------- member_family_details ----------
+drop policy if exists "family_details_select" on member_family_details;
+create policy "family_details_select" on member_family_details
+  for select using (
+    my_role() in ('superadmin','main_admin')
+    or (my_role() = 'branch_admin' and member_id in (
+      select id from members where branch_id = my_branch()
+    ))
+    or member_id in (select id from members where auth_id = auth.uid())
+  );
+
+drop policy if exists "family_details_write" on member_family_details;
+create policy "family_details_write" on member_family_details
+  for all using (
+    my_role() in ('superadmin','main_admin')
+    or (my_role() = 'branch_admin' and member_id in (
+      select id from members where branch_id = my_branch()
+    ))
+  )
+  with check (
+    my_role() in ('superadmin','main_admin')
+    or (my_role() = 'branch_admin' and member_id in (
+      select id from members where branch_id = my_branch()
+    ))
+  );
+
+-- ---------- member_children ----------
+drop policy if exists "children_select" on member_children;
+create policy "children_select" on member_children
+  for select using (
+    my_role() in ('superadmin','main_admin')
+    or (my_role() = 'branch_admin' and member_id in (
+      select id from members where branch_id = my_branch()
+    ))
+    or member_id in (select id from members where auth_id = auth.uid())
+  );
+
+drop policy if exists "children_write" on member_children;
+create policy "children_write" on member_children
+  for all using (
+    my_role() in ('superadmin','main_admin')
+    or (my_role() = 'branch_admin' and member_id in (
+      select id from members where branch_id = my_branch()
+    ))
+  )
+  with check (
+    my_role() in ('superadmin','main_admin')
+    or (my_role() = 'branch_admin' and member_id in (
+      select id from members where branch_id = my_branch()
+    ))
+  );
+
+-- ---------- member_beneficiary_declarations ----------
+drop policy if exists "beneficiary_select" on member_beneficiary_declarations;
+create policy "beneficiary_select" on member_beneficiary_declarations
+  for select using (
+    my_role() in ('superadmin','main_admin')
+    or (my_role() = 'branch_admin' and member_id in (
+      select id from members where branch_id = my_branch()
+    ))
+    or member_id in (select id from members where auth_id = auth.uid())
+  );
+
+drop policy if exists "beneficiary_write" on member_beneficiary_declarations;
+create policy "beneficiary_write" on member_beneficiary_declarations
+  for all using (
+    my_role() in ('superadmin','main_admin')
+    or (my_role() = 'branch_admin' and member_id in (
+      select id from members where branch_id = my_branch()
+    ))
+  )
+  with check (
+    my_role() in ('superadmin','main_admin')
+    or (my_role() = 'branch_admin' and member_id in (
+      select id from members where branch_id = my_branch()
+    ))
+  );
+
+-- ---------- monthly_contributions ----------
+drop policy if exists "monthly_contrib_select" on monthly_contributions;
+create policy "monthly_contrib_select" on monthly_contributions
+  for select using (
+    my_role() in ('superadmin','main_admin')
+    or (my_role() = 'branch_admin' and branch_id = my_branch())
+    or member_id in (select id from members where auth_id = auth.uid())
+  );
+
+drop policy if exists "monthly_contrib_insert" on monthly_contributions;
+create policy "monthly_contrib_insert" on monthly_contributions
+  for insert with check (
+    my_role() in ('superadmin','main_admin')
+    or (my_role() = 'branch_admin' and branch_id = my_branch())
+  );
+
+-- ---------- funeral_contributions ----------
+drop policy if exists "funeral_contrib_select" on funeral_contributions;
+create policy "funeral_contrib_select" on funeral_contributions
+  for select using (
+    my_role() in ('superadmin','main_admin')
+    or (my_role() = 'branch_admin' and branch_id = my_branch())
+    or member_id in (select id from members where auth_id = auth.uid())
+  );
+
+drop policy if exists "funeral_contrib_insert" on funeral_contributions;
+create policy "funeral_contrib_insert" on funeral_contributions
+  for insert with check (
+    my_role() in ('superadmin','main_admin')
+    or (my_role() = 'branch_admin' and branch_id = my_branch())
+  );
 -- (code is an internal short reference only - it no longer appears
 -- in member_id, which is now a single global UAE001-style sequence)
 -- ============================================================
