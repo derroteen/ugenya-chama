@@ -1,5 +1,5 @@
 import { createAdminClient, createClient } from '@/lib/supabase/server'
-import { memberIdToEmail, normalizePhone } from '@/lib/auth/shared'
+import { memberIdToEmail, normalizePhone, toLocalPhoneFormat } from '@/lib/auth/shared'
 
 interface CreateMemberInput {
   fullName: string
@@ -27,13 +27,14 @@ export async function createMember(input: CreateMemberInput) {
   const memberId: string = memberIdData
 
   const normalizedPhone = normalizePhone(input.phone)
+  const initialPassword = toLocalPhoneFormat(normalizedPhone)
   const email = memberIdToEmail(memberId)
 
   // 2. Create the auth user with phone number as initial password
   const admin = createAdminClient()
   const { data: authUser, error: authError } = await admin.auth.admin.createUser({
     email,
-    password: normalizedPhone,
+    password: initialPassword,
     email_confirm: true, // skip email verification, it's a synthetic address
   })
   if (authError) throw authError
@@ -55,13 +56,19 @@ export async function createMember(input: CreateMemberInput) {
 
   if (memberError) throw memberError
 
-  // 4. Give them a 'member' profile row too
-  await supabase.from('profiles').insert({
+  // 4. Give them a 'member' profile row too - must use the admin client,
+  // since RLS only allows superadmin to write to profiles directly, but
+  // any admin role needs to be able to create members.
+  const { error: profileError } = await admin.from('profiles').insert({
     id: authUser.user.id,
     role: 'member',
     branch_id: input.branchId,
     full_name: input.fullName,
   })
 
-  return { memberId, member }
+  if (profileError) {
+    throw profileError
+  }
+
+  return { memberId, initialPassword, member }
 }

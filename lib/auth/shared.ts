@@ -16,3 +16,12 @@ export function normalizePhone(phone: string) {
   if (digits.startsWith('254')) return digits
   return digits
 }
+
+/**
+ * Converts normalized Kenyan phone format back to local format for
+ * member-facing password communication, e.g. "254712345678" -> "0712345678".
+ */
+export function toLocalPhoneFormat(phone: string) {
+  if (!phone.startsWith('254')) return phone
+  return '0' + phone.slice(3)
+}

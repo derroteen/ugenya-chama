@@ -26,6 +26,35 @@ function roleHome(role: Role | null | undefined) {
   return '/'
 }
 
+function isSameLocation(request: NextRequest, target: URL) {
+  return (
+    target.pathname === request.nextUrl.pathname &&
+    target.search === request.nextUrl.search
+  )
+}
+
+function redirectIfDifferent(request: NextRequest, target: URL) {
+  if (isSameLocation(request, target)) {
+    return null
+  }
+  return NextResponse.redirect(target)
+}
+
+function clearSupabaseAuthCookies(request: NextRequest, response: NextResponse) {
+  const authCookieNames = request.cookies
+    .getAll()
+    .map(({ name }) => name)
+    .filter((name) => name.startsWith('sb-') && name.includes('auth-token'))
+
+  authCookieNames.forEach((name) => {
+    response.cookies.set(name, '', {
+      expires: new Date(0),
+      path: '/',
+      maxAge: 0,
+    })
+  })
+}
+
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
     request,
@@ -63,29 +92,56 @@ export async function middleware(request: NextRequest) {
     const redirectTo = `${pathname}${request.nextUrl.search}`
     const loginUrl = new URL('/login', request.url)
     loginUrl.searchParams.set('redirectTo', redirectTo)
-    return NextResponse.redirect(loginUrl)
+    const redirectResponse = redirectIfDifferent(request, loginUrl)
+    if (redirectResponse) {
+      return redirectResponse
+    }
+    return response
   }
 
   let role: Role | null = null
+  let profileLookupFailed = false
 
   if (user) {
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single()
 
+    profileLookupFailed = Boolean(profileError)
     role = (profile?.role as Role | undefined) ?? null
   }
 
+  if (user && (!role || profileLookupFailed)) {
+    const loginUrl = new URL('/login', request.url)
+    loginUrl.searchParams.set('error', 'session_invalid')
+
+    const redirectResponse = redirectIfDifferent(request, loginUrl)
+    if (redirectResponse) {
+      clearSupabaseAuthCookies(request, redirectResponse)
+      return redirectResponse
+    }
+  }
+
   if (user && (pathname === '/login' || pathname === '/')) {
-    return NextResponse.redirect(new URL(roleHome(role), request.url))
+    const homeUrl = new URL(roleHome(role), request.url)
+    const redirectResponse = redirectIfDifferent(request, homeUrl)
+    if (redirectResponse) {
+      return redirectResponse
+    }
+    return response
   }
 
   if (user && protectedRoute) {
     const allowed = role ? protectedRoute.allowedRoles.includes(role) : false
     if (!allowed) {
-      return NextResponse.redirect(new URL(roleHome(role), request.url))
+      const homeUrl = new URL(roleHome(role), request.url)
+      const redirectResponse = redirectIfDifferent(request, homeUrl)
+      if (redirectResponse) {
+        return redirectResponse
+      }
+      return response
     }
   }
 
@@ -100,11 +156,21 @@ export async function middleware(request: NextRequest) {
     const isChangePasswordPath = pathname === '/member/change-password'
 
     if (mustChangePassword && !isChangePasswordPath) {
-      return NextResponse.redirect(new URL('/member/change-password', request.url))
+      const mustChangeUrl = new URL('/member/change-password', request.url)
+      const redirectResponse = redirectIfDifferent(request, mustChangeUrl)
+      if (redirectResponse) {
+        return redirectResponse
+      }
+      return response
     }
 
     if (!mustChangePassword && isChangePasswordPath) {
-      return NextResponse.redirect(new URL('/member', request.url))
+      const memberHomeUrl = new URL('/member', request.url)
+      const redirectResponse = redirectIfDifferent(request, memberHomeUrl)
+      if (redirectResponse) {
+        return redirectResponse
+      }
+      return response
     }
   }
 

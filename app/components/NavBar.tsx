@@ -51,61 +51,100 @@ export default function NavBar() {
     let isActive = true;
 
     async function loadNavData() {
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
+      try {
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession();
 
-      if (!isActive) return;
+        if (!isActive) return;
 
-      if (sessionError || !session) {
-        setHasSession(false);
-        setIsLoaded(true);
-        return;
-      }
+        if (sessionError || !session) {
+          if (sessionError) {
+            console.error("NavBar: failed to get session", sessionError);
+          }
+          setHasSession(false);
+          return;
+        }
 
-      setHasSession(true);
+        setHasSession(true);
 
-      const userId = session.user.id;
-      const fallbackName = session.user.email ?? "User";
+        const userId = session.user.id;
+        const fallbackName = session.user.email ?? "User";
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role, full_name")
-        .eq("id", userId)
-        .maybeSingle();
-
-      if (!isActive) return;
-
-      const resolvedRole = isRole(profile?.role) ? profile.role : null;
-      setRole(resolvedRole);
-
-      if (resolvedRole === "member") {
-        const { data: member } = await supabase
-          .from("members")
-          .select("member_id")
-          .eq("auth_id", userId)
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("role, full_name")
+          .eq("id", userId)
           .maybeSingle();
 
         if (!isActive) return;
 
-        setDisplayName(member?.member_id ?? profile?.full_name ?? fallbackName);
-      } else {
-        setDisplayName(profile?.full_name ?? fallbackName);
-      }
+        if (profileError) {
+          console.error("NavBar: failed to fetch profile", profileError);
+        }
 
-      setIsLoaded(true);
+        const resolvedRole = isRole(profile?.role) ? profile.role : null;
+        setRole(resolvedRole);
+
+        if (resolvedRole === "member") {
+          const { data: member, error: memberError } = await supabase
+            .from("members")
+            .select("member_id")
+            .eq("auth_id", userId)
+            .maybeSingle();
+
+          if (!isActive) return;
+
+          if (memberError) {
+            console.error("NavBar: failed to fetch member record", memberError);
+          }
+
+          setDisplayName(member?.member_id ?? profile?.full_name ?? fallbackName);
+        } else {
+          setDisplayName(profile?.full_name ?? fallbackName);
+        }
+      } catch (error) {
+        if (!isActive) return;
+        console.error("NavBar: unexpected load error", error);
+        setHasSession(false);
+      } finally {
+        if (isActive) {
+          setIsLoaded(true);
+        }
+      }
     }
 
     loadNavData();
 
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!isActive) return;
+
+      if (!session) {
+        setHasSession(false);
+        setRole(null);
+        setDisplayName("");
+        setIsLoaded(true);
+        return;
+      }
+
+      void loadNavData();
+    });
+
     return () => {
       isActive = false;
+      subscription.unsubscribe();
     };
   }, [supabase]);
 
   async function handleLogout() {
-    await supabase.auth.signOut();
+    setHasSession(false);
+    setRole(null);
+    setDisplayName("");
+
+    await supabase.auth.signOut({ scope: "local" });
     router.push("/login");
     router.refresh();
   }

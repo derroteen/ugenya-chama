@@ -3,7 +3,7 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { clearMustChangePassword } from "@/lib/auth/login";
+import { clearMustChangePasswordAction } from "./actions";
 
 export default function ChangePasswordPage() {
   const router = useRouter();
@@ -45,8 +45,9 @@ export default function ChangePasswordPage() {
         throw updateError;
       }
 
-      await clearMustChangePassword(user.id);
+      await clearMustChangePasswordAction();
       router.refresh();
+      router.push('/member');
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unable to update password.";
       setError(message);
@@ -86,6 +87,7 @@ export default function ChangePasswordPage() {
                 type={showNewPassword ? "text" : "password"}
                 autoComplete="new-password"
                 required
+                disabled={isLoading}
                 value={newPassword}
                 onChange={(event) => setNewPassword(event.target.value)}
                 className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 pr-11 text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
@@ -93,9 +95,10 @@ export default function ChangePasswordPage() {
               />
               <button
                 type="button"
+                disabled={isLoading}
                 aria-label={showNewPassword ? "Hide password" : "Show password"}
                 onClick={() => setShowNewPassword((prev) => !prev)}
-                className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-500 transition hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-500 transition hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {showNewPassword ? (
                   <svg
@@ -148,6 +151,7 @@ export default function ChangePasswordPage() {
                 type={showConfirmPassword ? "text" : "password"}
                 autoComplete="new-password"
                 required
+                disabled={isLoading}
                 value={confirmPassword}
                 onChange={(event) => setConfirmPassword(event.target.value)}
                 className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 pr-11 text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
@@ -155,9 +159,10 @@ export default function ChangePasswordPage() {
               />
               <button
                 type="button"
+                disabled={isLoading}
                 aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                 onClick={() => setShowConfirmPassword((prev) => !prev)}
-                className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-500 transition hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-500 transition hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {showConfirmPassword ? (
                   <svg
@@ -202,7 +207,36 @@ export default function ChangePasswordPage() {
             disabled={isLoading}
             className="inline-flex w-full items-center justify-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isLoading ? "Updating..." : "Update Password"}
+            {isLoading ? (
+              <>
+                <svg
+                  className="mr-2 h-4 w-4 animate-spin"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="9"
+                    className="opacity-30"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                  />
+                  <path
+                    d="M21 12a9 9 0 00-9-9"
+                    className="opacity-100"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                Saving new password...
+              </>
+            ) : (
+              "Save new password"
+            )}
           </button>
         </form>
       </section>

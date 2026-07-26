@@ -10,7 +10,7 @@ import { memberIdToEmail } from '@/lib/auth/shared'
 export async function login(identifier: string, password: string) {
   const supabase = createClient()
 
-  const isMemberId = /^UGY-[A-Z]{3}-\d{4}$/i.test(identifier.trim())
+  const isMemberId = /^UAE\d{3,}$/i.test(identifier.trim())
   const email = isMemberId
     ? memberIdToEmail(identifier.trim())
     : identifier.trim()
