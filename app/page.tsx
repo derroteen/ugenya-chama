@@ -172,7 +172,7 @@ export default function Home() {
             <article className="rounded-xl border border-slate-200/90 bg-white px-5 py-5 shadow-sm">
               <p className={`${displayFont.className} text-4xl font-bold leading-none text-[#1d3a8a]`}>1</p>
               <p className="mt-3 text-base font-semibold text-[#0f1729]">Receive your Member ID</p>
-              <p className="mt-2 text-sm leading-6 text-[#475569]">Receive your Member ID from your branch administrator</p>
+              <p className="mt-2 text-sm leading-6 text-[#475569]">Receive your Member ID from the association&apos;s administration</p>
             </article>
             <article className="rounded-xl border border-slate-200/90 bg-white px-5 py-5 shadow-sm">
               <p className={`${displayFont.className} text-4xl font-bold leading-none text-[#1d3a8a]`}>2</p>
@@ -318,7 +318,7 @@ export default function Home() {
           }}
         />
         <div className="relative mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-12 text-base sm:px-6 lg:px-8">
-          <p className="font-semibold text-[#0f1729]">P.O. Box 105-30100, Eldoret</p>
+          <p className="font-semibold text-[#0f1729]">P.O. Box 195-30100, Eldoret</p>
           <p>
             Contact: <a href="mailto:ugenyaassociationeldoret@gmail.com" className="text-[#1d3a8a] underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a]">ugenyaassociationeldoret@gmail.com</a>
           </p>
