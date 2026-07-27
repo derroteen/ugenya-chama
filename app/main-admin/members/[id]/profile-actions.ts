@@ -33,6 +33,16 @@ function asOptionalNumber(value: FormDataEntryValue | null) {
   return parsed;
 }
 
+function asOptionalPositiveInteger(value: FormDataEntryValue | null) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return null;
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new Error("Sheet Position (Row No.) must be a positive integer.");
+  }
+  return parsed;
+}
+
 export async function updateMemberProfile(
   memberId: string,
   _previousState: ProfileActionResult,
@@ -64,6 +74,7 @@ export async function updateMemberProfile(
     const idNumber = String(formData.get("idNumber") ?? "").trim();
     const status = String(formData.get("status") ?? "").trim();
     const kbgSharesBf = asOptionalNumber(formData.get("kbgSharesBf"));
+    const sheetOrder = asOptionalPositiveInteger(formData.get("sheetOrder"));
 
     if (!fullName || !phone) {
       return { status: "error", message: "Full Name and Phone are required." };
@@ -81,6 +92,7 @@ export async function updateMemberProfile(
         id_number: idNumber || null,
         status,
         kbg_shares_bf: kbgSharesBf,
+        sheet_order: sheetOrder,
       })
       .eq("id", memberId);
 

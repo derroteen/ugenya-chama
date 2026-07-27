@@ -10,6 +10,7 @@ type MemberProfileFormProps = {
   idNumber: string | null;
   status: "active" | "inactive" | "suspended";
   kbgSharesBf: number | string | null;
+  sheetOrder: number | null;
 };
 
 const initialState: ProfileActionResult = {
@@ -24,6 +25,7 @@ export default function MemberProfileForm({
   idNumber,
   status,
   kbgSharesBf,
+  sheetOrder,
 }: MemberProfileFormProps) {
   const [state, formAction, pending] = useActionState(
     (previousState: ProfileActionResult, formData: FormData) =>
@@ -98,6 +100,22 @@ export default function MemberProfileForm({
             <option value="inactive">Inactive</option>
             <option value="suspended">Suspended</option>
           </select>
+        </div>
+
+        <div className="sm:col-span-2">
+          <label htmlFor="sheetOrder" className="mb-1 block text-sm font-semibold text-[#0f1729]">
+            Sheet Position (Row No.)
+          </label>
+          <input
+            id="sheetOrder"
+            name="sheetOrder"
+            type="number"
+            min={1}
+            step={1}
+            inputMode="numeric"
+            defaultValue={sheetOrder == null ? "" : String(sheetOrder)}
+            className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+          />
         </div>
 
         <div className="sm:col-span-2">

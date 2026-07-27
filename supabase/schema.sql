@@ -44,8 +44,10 @@ create table if not exists members (
 );
 
 alter table members add column if not exists kbg_shares_bf numeric(12,2);
+alter table members add column if not exists sheet_order integer default null;
 
 create index if not exists idx_members_branch on members(branch_id);
+create index if not exists idx_members_sheet_order on members(branch_id, sheet_order);
 
 -- Single global counter for member IDs (one row, id fixed at 1)
 create table if not exists member_id_counter (

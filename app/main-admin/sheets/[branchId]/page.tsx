@@ -73,9 +73,14 @@ export default async function MainAdminBranchSheetPage({ params, searchParams }:
           {selectedBranch.name} Contribution Sheet
         </h1>
 
-        <SheetFilters branches={branchOptions} currentBranchId={branchId} month={month} />
+        <SheetFilters
+          branches={branchOptions}
+          currentBranchId={branchId}
+          month={month}
+          isSheetOpen={rows.length > 0}
+        />
 
-        <SheetTableClient rows={rows} />
+        <SheetTableClient key={`${branchId}-${month}`} rows={rows} />
       </section>
     </main>
   );

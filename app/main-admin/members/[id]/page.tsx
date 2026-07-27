@@ -18,6 +18,7 @@ interface MemberRecord {
   status: "active" | "inactive" | "suspended";
   branch_id: string;
   kbg_shares_bf: number | string | null;
+  sheet_order: number | null;
   created_at: string;
   branches: { name: string } | Array<{ name: string }> | null;
 }
@@ -121,7 +122,7 @@ export default async function MainAdminMemberDetailsPage({ params }: PageProps) 
 
   const { data: member } = await supabase
     .from("members")
-    .select("id, member_id, full_name, phone, id_number, status, branch_id, kbg_shares_bf, created_at, branches(name)")
+    .select("id, member_id, full_name, phone, id_number, status, branch_id, kbg_shares_bf, sheet_order, created_at, branches(name)")
     .eq("id", id)
     .maybeSingle();
 
@@ -229,6 +230,7 @@ export default async function MainAdminMemberDetailsPage({ params }: PageProps) 
           idNumber={memberRecord.id_number}
           status={memberRecord.status}
           kbgSharesBf={memberRecord.kbg_shares_bf}
+          sheetOrder={memberRecord.sheet_order}
         />
 
         <section className="mt-8">

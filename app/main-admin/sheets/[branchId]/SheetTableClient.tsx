@@ -1,11 +1,10 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import {
   type SheetRow,
   updateAllEntries,
-  updateMonthlyEntryFromForm,
+  updateMonthlyEntry,
 } from "../actions";
 
 type SheetTableClientProps = {
@@ -13,15 +12,74 @@ type SheetTableClientProps = {
 };
 
 type RowDraft = SheetRow & {
+  kbgSharesBfInput: string;
+  oldSavingsBfInput: string;
+  previousBalanceBfInput: string;
   subsInput: string;
+  previousEmergBfInput: string;
   emergSubsInput: string;
   withdrawalInput: string;
 };
+
+type EditableField =
+  | "kbgSharesBfInput"
+  | "oldSavingsBfInput"
+  | "previousBalanceBfInput"
+  | "subsInput"
+  | "previousEmergBfInput"
+  | "emergSubsInput"
+  | "withdrawalInput";
 
 function toNumber(value: number | string) {
   if (typeof value === "number") return value;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function calculateCumulativeSaving(row: Pick<RowDraft, "kbgSharesBfInput" | "oldSavingsBfInput" | "previousBalanceBfInput" | "subsInput">) {
+  return (
+    toNumber(row.kbgSharesBfInput) +
+    toNumber(row.oldSavingsBfInput) +
+    toNumber(row.previousBalanceBfInput) +
+    toNumber(row.subsInput)
+  );
+}
+
+function calculateCumulativeEmergFund(row: Pick<RowDraft, "previousEmergBfInput" | "emergSubsInput">) {
+  return toNumber(row.previousEmergBfInput) + toNumber(row.emergSubsInput);
+}
+
+function calculateEmergencyBalance(
+  row: Pick<RowDraft, "previousEmergBfInput" | "emergSubsInput" | "withdrawalInput">
+) {
+  return calculateCumulativeEmergFund(row) - toNumber(row.withdrawalInput);
+}
+
+function syncComputedValues(row: RowDraft): RowDraft {
+  const kbgSharesBf = toNumber(row.kbgSharesBfInput);
+  const oldSavingsBf = toNumber(row.oldSavingsBfInput);
+  const previousBalanceBf = toNumber(row.previousBalanceBfInput);
+  const subs = toNumber(row.subsInput);
+  const previousEmergBf = toNumber(row.previousEmergBfInput);
+  const emergSubs = toNumber(row.emergSubsInput);
+  const withdrawal = toNumber(row.withdrawalInput);
+  const cumulativeSaving = calculateCumulativeSaving(row);
+  const cumulativeEmergFund = calculateCumulativeEmergFund(row);
+  const emergencyBalance = calculateEmergencyBalance(row);
+
+  return {
+    ...row,
+    kbgSharesBf,
+    oldSavingsBf,
+    previousBalanceBf,
+    subs,
+    cumulativeSaving,
+    previousEmergBf,
+    emergSubs,
+    cumulativeEmergFund,
+    withdrawal,
+    emergencyBalance,
+  };
 }
 
 function formatKsh(value: number) {
@@ -39,14 +97,19 @@ function toSuccessMessage(message: string) {
 }
 
 export default function SheetTableClient({ rows }: SheetTableClientProps) {
-  const router = useRouter();
   const [isSavingAll, startSaveAll] = useTransition();
+  const [isSavingRow, startSaveRow] = useTransition();
+  const [savingRowId, setSavingRowId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [draftRows, setDraftRows] = useState<RowDraft[]>(() =>
     rows.map((row) => ({
       ...row,
+      kbgSharesBfInput: String(row.kbgSharesBf),
+      oldSavingsBfInput: String(row.oldSavingsBf),
+      previousBalanceBfInput: String(row.previousBalanceBf),
       subsInput: String(row.subs),
+      previousEmergBfInput: String(row.previousEmergBf),
       emergSubsInput: String(row.emergSubs),
       withdrawalInput: String(row.withdrawal),
     }))
@@ -56,11 +119,11 @@ export default function SheetTableClient({ rows }: SheetTableClientProps) {
     () =>
       draftRows.reduce(
         (acc, row) => {
-          acc.subs += toNumber(row.subs);
-          acc.cumulativeSaving += toNumber(row.cumulativeSaving);
-          acc.emergSubs += toNumber(row.emergSubs);
-          acc.withdrawal += toNumber(row.withdrawal);
-          acc.emergencyBalance += toNumber(row.emergencyBalance);
+          acc.subs += toNumber(row.subsInput);
+          acc.cumulativeSaving += calculateCumulativeSaving(row);
+          acc.emergSubs += toNumber(row.emergSubsInput);
+          acc.withdrawal += toNumber(row.withdrawalInput);
+          acc.emergencyBalance += calculateEmergencyBalance(row);
           return acc;
         },
         {
@@ -76,7 +139,7 @@ export default function SheetTableClient({ rows }: SheetTableClientProps) {
 
   const updateDraftField = (
     rowIndex: number,
-    field: "subsInput" | "emergSubsInput" | "withdrawalInput",
+    field: EditableField,
     value: string
   ) => {
     setDraftRows((current) => {
@@ -89,6 +152,46 @@ export default function SheetTableClient({ rows }: SheetTableClientProps) {
     });
   };
 
+  const syncRowAfterSave = (rowIndex: number) => {
+    setDraftRows((current) => {
+      const next = [...current];
+      next[rowIndex] = syncComputedValues(next[rowIndex]);
+      return next;
+    });
+  };
+
+  const handleSaveRow = (rowIndex: number) => {
+    const row = draftRows[rowIndex];
+
+    setErrorMessage("");
+    setSuccessMessage("");
+    setSavingRowId(row.monthlySavingsId);
+
+    startSaveRow(async () => {
+      const result = await updateMonthlyEntry(
+        row.monthlySavingsId,
+        row.emergencyContributionId,
+        row.kbgSharesBfInput,
+        row.oldSavingsBfInput,
+        row.previousBalanceBfInput,
+        row.subsInput,
+        row.previousEmergBfInput,
+        row.emergSubsInput,
+        row.withdrawalInput
+      );
+
+      setSavingRowId(null);
+
+      if (result.status === "error") {
+        setErrorMessage(result.message);
+        return;
+      }
+
+      syncRowAfterSave(rowIndex);
+      setSuccessMessage(toSuccessMessage(result.message));
+    });
+  };
+
   const handleSaveAll = () => {
     setErrorMessage("");
     setSuccessMessage("");
@@ -98,7 +201,11 @@ export default function SheetTableClient({ rows }: SheetTableClientProps) {
         draftRows.map((row) => ({
           monthlySavingsId: row.monthlySavingsId,
           emergencyContributionId: row.emergencyContributionId,
+          kbgSharesBf: row.kbgSharesBfInput,
+          oldSavingsBf: row.oldSavingsBfInput,
+          previousBalanceBf: row.previousBalanceBfInput,
           subs: row.subsInput,
+          previousEmergBf: row.previousEmergBfInput,
           emergSubs: row.emergSubsInput,
           withdrawal: row.withdrawalInput,
         }))
@@ -109,8 +216,8 @@ export default function SheetTableClient({ rows }: SheetTableClientProps) {
         return;
       }
 
+      setDraftRows((current) => current.map(syncComputedValues));
       setSuccessMessage(toSuccessMessage(result.message));
-      router.refresh();
     });
   };
 
@@ -120,7 +227,7 @@ export default function SheetTableClient({ rows }: SheetTableClientProps) {
         <button
           type="button"
           onClick={handleSaveAll}
-          disabled={isSavingAll || draftRows.length === 0}
+          disabled={isSavingAll || isSavingRow || draftRows.length === 0}
           className="inline-flex items-center rounded-lg bg-[#1d3a8a] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#16306f] disabled:cursor-not-allowed disabled:opacity-70"
         >
           {isSavingAll ? "Saving..." : "Save All"}
@@ -185,21 +292,53 @@ export default function SheetTableClient({ rows }: SheetTableClientProps) {
                 </tr>
               ) : (
                 draftRows.map((row, index) => {
-                  const formId = `row-${row.monthlySavingsId}`;
+                  const cumulativeSaving = calculateCumulativeSaving(row);
+                  const cumulativeEmergFund = calculateCumulativeEmergFund(row);
+                  const emergencyBalance = calculateEmergencyBalance(row);
+                  const rowIsSaving = isSavingRow && savingRowId === row.monthlySavingsId;
                   return (
                     <tr key={row.monthlySavingsId} className="hover:bg-slate-50/70 align-top">
-                      <td className="px-3 py-3 text-sm text-slate-700">{index + 1}</td>
+                      <td className="px-3 py-3 text-sm text-slate-700">{row.sheetOrder ?? "-"}</td>
                       <td className="px-3 py-3 text-sm font-medium text-[#0f1729]">
                         <div>{row.memberName}</div>
                         <div className="text-xs text-slate-500">{row.memberNo}</div>
                       </td>
-                      <td className="px-3 py-3 text-sm text-slate-700">{formatKsh(row.kbgSharesBf)}</td>
-                      <td className="px-3 py-3 text-sm text-slate-700">{formatKsh(row.oldSavingsBf)}</td>
-                      <td className="px-3 py-3 text-sm text-slate-700">{formatKsh(row.previousBalanceBf)}</td>
+                      <td className="px-3 py-3 text-sm text-slate-700">
+                        <input
+                          name="kbgSharesBf"
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={row.kbgSharesBfInput}
+                          onChange={(event) => updateDraftField(index, "kbgSharesBfInput", event.target.value)}
+                          className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+                        />
+                      </td>
+                      <td className="px-3 py-3 text-sm text-slate-700">
+                        <input
+                          name="oldSavingsBf"
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={row.oldSavingsBfInput}
+                          onChange={(event) => updateDraftField(index, "oldSavingsBfInput", event.target.value)}
+                          className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+                        />
+                      </td>
+                      <td className="px-3 py-3 text-sm text-slate-700">
+                        <input
+                          name="previousBalanceBf"
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={row.previousBalanceBfInput}
+                          onChange={(event) => updateDraftField(index, "previousBalanceBfInput", event.target.value)}
+                          className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+                        />
+                      </td>
 
                       <td className="px-3 py-3 text-sm text-slate-700">
                         <input
-                          form={formId}
                           name="subs"
                           type="number"
                           min={0}
@@ -209,11 +348,20 @@ export default function SheetTableClient({ rows }: SheetTableClientProps) {
                           className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
                         />
                       </td>
-                      <td className="px-3 py-3 text-sm font-semibold text-[#0f1729]">{formatKsh(row.cumulativeSaving)}</td>
-                      <td className="px-3 py-3 text-sm text-slate-700">{formatKsh(row.previousEmergBf)}</td>
+                      <td className="px-3 py-3 text-sm font-semibold text-[#0f1729]">{formatKsh(cumulativeSaving)}</td>
                       <td className="px-3 py-3 text-sm text-slate-700">
                         <input
-                          form={formId}
+                          name="previousEmergBf"
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={row.previousEmergBfInput}
+                          onChange={(event) => updateDraftField(index, "previousEmergBfInput", event.target.value)}
+                          className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+                        />
+                      </td>
+                      <td className="px-3 py-3 text-sm text-slate-700">
+                        <input
                           name="emergSubs"
                           type="number"
                           min={0}
@@ -223,10 +371,9 @@ export default function SheetTableClient({ rows }: SheetTableClientProps) {
                           className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
                         />
                       </td>
-                      <td className="px-3 py-3 text-sm font-semibold text-[#0f1729]">{formatKsh(row.cumulativeEmergFund)}</td>
+                      <td className="px-3 py-3 text-sm font-semibold text-[#0f1729]">{formatKsh(cumulativeEmergFund)}</td>
                       <td className="px-3 py-3 text-sm text-slate-700">
                         <input
-                          form={formId}
                           name="withdrawal"
                           type="number"
                           min={0}
@@ -236,18 +383,15 @@ export default function SheetTableClient({ rows }: SheetTableClientProps) {
                           className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
                         />
                       </td>
-                      <td className="px-3 py-3 text-sm font-semibold text-[#0f1729]">{formatKsh(row.emergencyBalance)}</td>
+                      <td className="px-3 py-3 text-sm font-semibold text-[#0f1729]">{formatKsh(emergencyBalance)}</td>
                       <td className="px-3 py-3 text-right text-sm">
-                        <form id={formId} action={updateMonthlyEntryFromForm}>
-                          <input type="hidden" name="monthlySavingsId" value={row.monthlySavingsId} />
-                          <input type="hidden" name="emergencyContributionId" value={row.emergencyContributionId} />
-                        </form>
                         <button
-                          form={formId}
-                          type="submit"
+                          type="button"
+                          onClick={() => handleSaveRow(index)}
+                          disabled={isSavingAll || isSavingRow}
                           className="inline-flex items-center rounded-lg bg-[#1d3a8a] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#16306f]"
                         >
-                          Save Row
+                          {rowIsSaving ? "Saving..." : "Save Row"}
                         </button>
                       </td>
                     </tr>

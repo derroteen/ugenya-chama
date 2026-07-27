@@ -59,7 +59,7 @@ export default async function MainAdminDashboardPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name")
+    .select("full_name, role")
     .eq("id", user.id)
     .single();
 
@@ -163,6 +163,16 @@ export default async function MainAdminDashboardPage() {
               <p className="text-lg font-semibold text-[#0f1729]">Open Contribution Sheets</p>
               <p className="mt-1 text-sm text-slate-600">Record monthly and emergency sheet values by branch.</p>
             </Link>
+
+            {profile && (profile.role === "main_admin" || profile.role === "superadmin") ? (
+              <Link
+                href="/main-admin/reports"
+                className="rounded-xl border border-[#1d3a8a]/20 bg-[#f8fbff] px-5 py-5 transition hover:border-[#1d3a8a]/40 hover:shadow-sm"
+              >
+                <p className="text-lg font-semibold text-[#0f1729]">Generate Monthly PDF Report</p>
+                <p className="mt-1 text-sm text-slate-600">Download a combined all-branches monthly report in PDF format.</p>
+              </Link>
+            ) : null}
           </div>
         </section>
 
