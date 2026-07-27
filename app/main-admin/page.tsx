@@ -22,6 +22,10 @@ function firstDayOfMonthIso() {
   return first.toISOString().slice(0, 10);
 }
 
+function currentMonthKey() {
+  return new Date().toISOString().slice(0, 7);
+}
+
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -65,8 +69,9 @@ export default async function MainAdminDashboardPage() {
 
   const monthStart = firstDayOfMonthIso();
   const today = todayIso();
+  const currentMonth = currentMonthKey();
 
-  const [activeMembersResult, newMembersResult, monthlyContributionsResult, funeralContributionsResult, recentMembersResult] =
+  const [activeMembersResult, newMembersResult, monthlyContributionsResult, emergencyContributionsResult, recentMembersResult] =
     await Promise.all([
       supabase.from("members").select("id", { count: "exact", head: true }).eq("status", "active"),
       supabase
@@ -80,10 +85,9 @@ export default async function MainAdminDashboardPage() {
         .gte("entry_date", monthStart)
         .lte("entry_date", today),
       supabase
-        .from("funeral_contributions")
-        .select("amount")
-        .gte("entry_date", monthStart)
-        .lte("entry_date", today),
+        .from("emergency_contributions")
+        .select("emerg_subs")
+        .eq("month", currentMonth),
       supabase
         .from("members")
         .select("id, full_name, member_id, created_at, branches(name)")
@@ -96,8 +100,8 @@ export default async function MainAdminDashboardPage() {
     0
   );
 
-  const totalFuneralContributions = (funeralContributionsResult.data ?? []).reduce(
-    (sum, row) => sum + toNumber(row.amount),
+  const totalEmergencyContributions = (emergencyContributionsResult.data ?? []).reduce(
+    (sum, row) => sum + toNumber(row.emerg_subs),
     0
   );
 
@@ -139,9 +143,9 @@ export default async function MainAdminDashboardPage() {
           </article>
 
           <article className="rounded-xl border border-[#1d3a8a]/20 bg-[#0f1729] px-5 py-5 text-white shadow-sm">
-            <p className="text-sm font-semibold text-slate-200">Total Funeral Fund</p>
-            <p className="mt-5 text-3xl font-bold tracking-tight text-[#c9a227]">{formatKsh(totalFuneralContributions)}</p>
-            <p className="mt-2 text-xs text-slate-300">Total this month across all branches</p>
+            <p className="text-sm font-semibold text-slate-200">Total Emergency Fund</p>
+            <p className="mt-5 text-3xl font-bold tracking-tight text-[#c9a227]">{formatKsh(totalEmergencyContributions)}</p>
+            <p className="mt-2 text-xs text-slate-300">Emergency fund total this month</p>
           </article>
         </section>
 
