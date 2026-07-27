@@ -26,6 +26,14 @@ export type UpdateEntryResult = {
   message: string;
 };
 
+export type UpdateAllEntriesInput = {
+  monthlySavingsId: string;
+  emergencyContributionId: string;
+  subs: string | number;
+  emergSubs: string | number;
+  withdrawal: string | number;
+};
+
 function toNumber(value: unknown) {
   if (typeof value === "number") return value;
   if (typeof value === "string") {
@@ -92,36 +100,34 @@ export async function openMonthForBranch(branchId: string, month: string): Promi
     throw existingMonthlyError;
   }
 
-  if (!existingMonthly || existingMonthly.length === 0) {
-    const { data: activeMembers, error: membersError } = await supabase
-      .from("members")
-      .select("id, member_id, full_name, kbg_shares_bf")
-      .eq("branch_id", branchId)
-      .eq("status", "active")
-      .order("full_name", { ascending: true });
+  const { data: activeMembers, error: membersError } = await supabase
+    .from("members")
+    .select("id, member_id, full_name, kbg_shares_bf")
+    .eq("branch_id", branchId)
+    .eq("status", "active")
+    .order("full_name", { ascending: true });
 
-    if (membersError) {
-      throw membersError;
-    }
+  if (membersError) {
+    throw membersError;
+  }
 
-    const members = activeMembers ?? [];
-    const memberIds = members.map((member) => member.id);
+  const members = activeMembers ?? [];
+  const existingMemberIds = new Set((existingMonthly ?? []).map((row) => row.member_id));
+  const missingMembers = members.filter((member) => !existingMemberIds.has(member.id));
+  const missingMemberIds = missingMembers.map((member) => member.id);
 
+  if (missingMembers.length > 0) {
     const [latestMonthlyResult, latestEmergencyResult] = await Promise.all([
-      memberIds.length
-        ? supabase
-            .from("monthly_savings")
-            .select("member_id, cumulative_saving, old_savings_bf, month")
-            .in("member_id", memberIds)
-            .order("month", { ascending: false })
-        : Promise.resolve({ data: [], error: null }),
-      memberIds.length
-        ? supabase
-            .from("emergency_contributions")
-            .select("member_id, emergency_balance, month")
-            .in("member_id", memberIds)
-            .order("month", { ascending: false })
-        : Promise.resolve({ data: [], error: null }),
+      supabase
+        .from("monthly_savings")
+        .select("member_id, cumulative_saving, old_savings_bf, month")
+        .in("member_id", missingMemberIds)
+        .order("month", { ascending: false }),
+      supabase
+        .from("emergency_contributions")
+        .select("member_id, emergency_balance, month")
+        .in("member_id", missingMemberIds)
+        .order("month", { ascending: false }),
     ]);
 
     if (latestMonthlyResult.error) throw latestMonthlyResult.error;
@@ -148,7 +154,7 @@ export async function openMonthForBranch(branchId: string, month: string): Promi
       }
     }
 
-    const monthlyPayload = members.map((member) => {
+    const monthlyPayload = missingMembers.map((member) => {
       const latestMonthly = latestMonthlyByMember.get(member.id);
       const previousBalance = latestMonthly?.cumulativeSaving ?? 0;
       const oldSavingsBf = latestMonthly?.oldSavingsBf ?? 0;
@@ -164,7 +170,7 @@ export async function openMonthForBranch(branchId: string, month: string): Promi
       };
     });
 
-    const emergencyPayload = members.map((member) => {
+    const emergencyPayload = missingMembers.map((member) => {
       const previousEmergencyBalance = latestEmergencyByMember.get(member.id) ?? 0;
       return {
         branch_id: branchId,
@@ -346,5 +352,177 @@ export async function updateMonthlyEntryFromForm(formData: FormData): Promise<vo
 
   if (result.status === "error") {
     throw new Error(result.message);
+  }
+}
+
+export async function updateAllEntries(rows: UpdateAllEntriesInput[]): Promise<UpdateEntryResult> {
+  try {
+    const { supabase } = await ensureAdminAccess();
+
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return {
+        status: "success",
+        message: "0 rows saved.",
+      };
+    }
+
+    const preparedUpdates: Array<{
+      rowNumber: number;
+      memberLabel: string;
+      monthlySavingsId: string;
+      emergencyContributionId: string;
+      branchId: string;
+      month: string;
+      subs: number;
+      cumulativeSaving: number;
+      emergSubs: number;
+      cumulativeEmergFund: number;
+      withdrawal: number;
+      emergencyBalance: number;
+    }> = [];
+
+    for (let index = 0; index < rows.length; index += 1) {
+      const row = rows[index];
+      const rowNumber = index + 1;
+
+      let subs: number;
+      let emergSubs: number;
+      let withdrawal: number;
+
+      try {
+        subs = parseMoney(String(row.subs ?? ""));
+      } catch {
+        return {
+          status: "error",
+          message: `Row ${rowNumber}: Subs must be a non-negative number.`,
+        };
+      }
+
+      try {
+        emergSubs = parseMoney(String(row.emergSubs ?? ""));
+      } catch {
+        return {
+          status: "error",
+          message: `Row ${rowNumber}: Emerg Subs must be a non-negative number.`,
+        };
+      }
+
+      try {
+        withdrawal = parseMoney(String(row.withdrawal ?? ""));
+      } catch {
+        return {
+          status: "error",
+          message: `Row ${rowNumber}: Withdrawal must be a non-negative number.`,
+        };
+      }
+
+      const { data: monthlyRow, error: monthlyRowError } = await supabase
+        .from("monthly_savings")
+        .select("id, branch_id, month, previous_balance_bf, members(member_id, full_name)")
+        .eq("id", row.monthlySavingsId)
+        .single();
+
+      if (monthlyRowError || !monthlyRow) {
+        return {
+          status: "error",
+          message: `Row ${rowNumber}: monthly row not found.`,
+        };
+      }
+
+      const { data: emergencyRow, error: emergencyRowError } = await supabase
+        .from("emergency_contributions")
+        .select("id, previous_emerg_bf")
+        .eq("id", row.emergencyContributionId)
+        .single();
+
+      if (emergencyRowError || !emergencyRow) {
+        return {
+          status: "error",
+          message: `Row ${rowNumber}: emergency row not found.`,
+        };
+      }
+
+      const memberRelation = monthlyRow.members as
+        | { member_id?: string; full_name?: string }
+        | Array<{ member_id?: string; full_name?: string }>
+        | null;
+      const member = Array.isArray(memberRelation) ? memberRelation[0] : memberRelation;
+      const memberLabel = member?.full_name ?? member?.member_id ?? "Unknown Member";
+
+      const cumulativeSaving = toNumber(monthlyRow.previous_balance_bf) + subs;
+      const cumulativeEmergFund = toNumber(emergencyRow.previous_emerg_bf) + emergSubs;
+      const emergencyBalance = cumulativeEmergFund - withdrawal;
+
+      if (emergencyBalance < 0) {
+        return {
+          status: "error",
+          message: `Row ${rowNumber} (${memberLabel}) withdrawal cannot exceed the cumulative emergency fund.`,
+        };
+      }
+
+      preparedUpdates.push({
+        rowNumber,
+        memberLabel,
+        monthlySavingsId: row.monthlySavingsId,
+        emergencyContributionId: row.emergencyContributionId,
+        branchId: monthlyRow.branch_id,
+        month: monthlyRow.month,
+        subs,
+        cumulativeSaving,
+        emergSubs,
+        cumulativeEmergFund,
+        withdrawal,
+        emergencyBalance,
+      });
+    }
+
+    for (const update of preparedUpdates) {
+      const { error: monthlyUpdateError } = await supabase
+        .from("monthly_savings")
+        .update({
+          subs: update.subs,
+          cumulative_saving: update.cumulativeSaving,
+        })
+        .eq("id", update.monthlySavingsId);
+
+      if (monthlyUpdateError) {
+        return {
+          status: "error",
+          message: `Row ${update.rowNumber} (${update.memberLabel}) could not be saved.`,
+        };
+      }
+
+      const { error: emergencyUpdateError } = await supabase
+        .from("emergency_contributions")
+        .update({
+          emerg_subs: update.emergSubs,
+          cumulative_emerg_fund: update.cumulativeEmergFund,
+          withdrawal: update.withdrawal,
+          emergency_balance: update.emergencyBalance,
+        })
+        .eq("id", update.emergencyContributionId);
+
+      if (emergencyUpdateError) {
+        return {
+          status: "error",
+          message: `Row ${update.rowNumber} (${update.memberLabel}) could not be saved.`,
+        };
+      }
+    }
+
+    const revalidationPaths = new Set(preparedUpdates.map((update) => `/main-admin/sheets/${update.branchId}?month=${update.month}`));
+    for (const path of revalidationPaths) {
+      revalidatePath(path);
+    }
+
+    return {
+      status: "success",
+      message: `${preparedUpdates.length} rows saved.`,
+    };
+  } catch (error) {
+    return {
+      status: "error",
+      message: error instanceof Error && error.message ? error.message : "Unable to save all rows.",
+    };
   }
 }
