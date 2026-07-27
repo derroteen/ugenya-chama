@@ -324,6 +324,17 @@ function LoginPageContent() {
               </button>
             </form>
 
+            <p className="mt-4 text-sm text-slate-500">
+              By logging in, you agree to our{" "}
+              <Link
+                href="/terms"
+                className="text-[#1d3a8a] underline underline-offset-2 hover:text-[#16306f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a]"
+              >
+                Terms &amp; Privacy Policy
+              </Link>
+              .
+            </p>
+
             <div className="mt-5 space-y-2">
               {branchCode ? (
                 <>

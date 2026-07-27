@@ -322,7 +322,15 @@ export default function Home() {
           <p>
             Contact: <a href="mailto:ugenyaassociationeldoret@gmail.com" className="text-[#1d3a8a] underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a]">ugenyaassociationeldoret@gmail.com</a>
           </p>
-          <p className="text-slate-500">© {year} Ugenya Association Eldoret (UAE). All rights reserved.</p>
+          <p className="text-slate-500">
+            © {year} Ugenya Association Eldoret (UAE). All rights reserved. {" "}
+            <Link
+              href="/terms"
+              className="underline underline-offset-2 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a]"
+            >
+              Terms &amp; Privacy
+            </Link>
+          </p>
         </div>
       </footer>
     </main>
