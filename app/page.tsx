@@ -97,6 +97,35 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="relative overflow-hidden bg-white">
+        <div className="relative mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
+          <div className="flex items-center gap-3">
+            <h2 className={`${displayFont.className} text-3xl font-bold text-[#0f1729] sm:text-4xl`}>What We Offer</h2>
+            <div className="h-px flex-1 bg-slate-200" aria-hidden="true" />
+          </div>
+          <div className="mt-8 grid grid-cols-1 gap-5 lg:grid-cols-3">
+            <article className="rounded-xl border border-slate-200/90 border-t-2 border-t-[#c9a227] bg-white px-5 py-5 shadow-sm">
+              <h3 className={`${displayFont.className} text-2xl font-semibold text-[#0f1729]`}>Monthly Savings</h3>
+              <p className="mt-3 text-base leading-7 text-[#475569]">
+                Members contribute monthly across all 12 branches. Every contribution is recorded, tracked, and accessible — building a reliable savings record for every household.
+              </p>
+            </article>
+            <article className="rounded-xl border border-slate-200/90 border-t-2 border-t-[#c9a227] bg-white px-5 py-5 shadow-sm">
+              <h3 className={`${displayFont.className} text-2xl font-semibold text-[#0f1729]`}>Emergency Fund</h3>
+              <p className="mt-3 text-base leading-7 text-[#475569]">
+                Each member contributes to a shared emergency fund that provides rapid support when households face urgent financial needs.
+              </p>
+            </article>
+            <article className="rounded-xl border border-slate-200/90 border-t-2 border-t-[#c9a227] bg-white px-5 py-5 shadow-sm">
+              <h3 className={`${displayFont.className} text-2xl font-semibold text-[#0f1729]`}>Welfare &amp; Accountability</h3>
+              <p className="mt-3 text-base leading-7 text-[#475569]">
+                UAE holds regular meetings and maintains transparent records, ensuring every member can see their contribution history and cumulative balance at any time.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
       <section id="about" className="relative overflow-hidden bg-[#eef2ff]">
         <div
           className="pointer-events-none absolute inset-0 opacity-35"
@@ -120,6 +149,49 @@ export default function Home() {
               Our guiding motto, <span className="italic text-[#c9a227]">Riwruok Eteko</span>, reminds us that unity is strength: when members stand together, each household is better protected and the whole community advances.
             </p>
           </div>
+        </div>
+      </section>
+
+      <section className="relative overflow-hidden bg-[#eef2ff]">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-35"
+          aria-hidden="true"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 1px 1px, rgba(15,23,41,0.10) 1px, transparent 1.5px)",
+            backgroundSize: "22px 22px",
+          }}
+        />
+        <div className="relative mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
+          <h2 className={`${displayFont.className} text-3xl font-bold text-[#0f1729] sm:text-4xl`}>Your Records, Online</h2>
+          <p className="mt-6 max-w-4xl text-lg leading-8 text-[#475569]">
+            UAE now manages all member records through a secure digital portal. Every member receives a unique Member ID and can log in at any time to view their savings history, cumulative balance, and emergency fund contributions — from any device.
+          </p>
+
+          <div className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-3">
+            <article className="rounded-xl border border-slate-200/90 bg-white px-5 py-5 shadow-sm">
+              <p className={`${displayFont.className} text-4xl font-bold leading-none text-[#1d3a8a]`}>1</p>
+              <p className="mt-3 text-base font-semibold text-[#0f1729]">Receive your Member ID</p>
+              <p className="mt-2 text-sm leading-6 text-[#475569]">Receive your Member ID from your branch administrator</p>
+            </article>
+            <article className="rounded-xl border border-slate-200/90 bg-white px-5 py-5 shadow-sm">
+              <p className={`${displayFont.className} text-4xl font-bold leading-none text-[#1d3a8a]`}>2</p>
+              <p className="mt-3 text-base font-semibold text-[#0f1729]">Log In Securely</p>
+              <p className="mt-2 text-sm leading-6 text-[#475569]">Log in using your Member ID and issued credentials</p>
+            </article>
+            <article className="rounded-xl border border-slate-200/90 bg-white px-5 py-5 shadow-sm">
+              <p className={`${displayFont.className} text-4xl font-bold leading-none text-[#1d3a8a]`}>3</p>
+              <p className="mt-3 text-base font-semibold text-[#0f1729]">Track Your Records</p>
+              <p className="mt-2 text-sm leading-6 text-[#475569]">View your full contribution history and current balance</p>
+            </article>
+          </div>
+
+          <Link
+            href="/login"
+            className="mt-10 inline-flex rounded-md bg-[#1d3a8a] px-6 py-3.5 text-base font-semibold text-white transition hover:bg-[#16306f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a] focus-visible:ring-offset-2"
+          >
+            Login
+          </Link>
         </div>
       </section>
 
@@ -153,6 +225,31 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="relative overflow-hidden bg-white">
+        <div className="relative mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
+          <h2 className={`${displayFont.className} text-3xl font-bold text-[#0f1729] sm:text-4xl`}>How Contributions Work</h2>
+          <div className="mt-8 grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <article className="rounded-xl border border-slate-200/90 bg-white px-5 py-5 shadow-sm">
+              <h3 className={`${displayFont.className} text-2xl font-semibold text-[#0f1729]`}>Monthly Savings</h3>
+              <p className="mt-3 text-base leading-7 text-[#475569]">
+                Each month, your branch administrator records your subscription against your account. Your running balance accumulates over time, combining your carry-forward balance, current month&apos;s contribution, and any applicable dividends.
+              </p>
+            </article>
+            <article className="rounded-xl border border-slate-200/90 bg-white px-5 py-5 shadow-sm">
+              <h3 className={`${displayFont.className} text-2xl font-semibold text-[#0f1729]`}>Emergency Fund</h3>
+              <p className="mt-3 text-base leading-7 text-[#475569]">
+                Alongside monthly savings, members contribute to a branch emergency fund. This fund covers urgent welfare needs and is tracked separately, with withdrawals recorded and your emergency balance updated accordingly.
+              </p>
+            </article>
+          </div>
+          <div className="mt-6 rounded-xl border border-[#c9a227]/60 bg-[#fffdf5] px-5 py-4">
+            <p className="text-base leading-7 text-[#475569]">
+              All records are managed by the association&apos;s administration and updated monthly. Members can view their own records at any time through the member portal.
+            </p>
+          </div>
+        </div>
+      </section>
+
       <section id="membership" className="relative overflow-hidden bg-[#eef2ff]">
         <div
           className="pointer-events-none absolute inset-0 opacity-35"
@@ -174,6 +271,39 @@ export default function Home() {
           >
             Download Membership Application Form
           </Link>
+        </div>
+      </section>
+
+      <section className="relative overflow-hidden bg-[#eef2ff]">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-35"
+          aria-hidden="true"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 1px 1px, rgba(15,23,41,0.10) 1px, transparent 1.5px)",
+            backgroundSize: "24px 24px",
+          }}
+        />
+        <div className="relative mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
+          <h2 className={`${displayFont.className} text-3xl font-bold text-[#0f1729] sm:text-4xl`}>Built on Trust</h2>
+          <p className="mt-6 max-w-4xl text-lg leading-8 text-[#475569]">
+            UAE&apos;s digital system is built with security and transparency at its core. Member records are protected, access is role-controlled, and every entry is traceable. Administrators manage records through a dedicated portal, and members can only view their own data — never anyone else&apos;s.
+          </p>
+
+          <div className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-2">
+            <article className="rounded-xl border border-slate-200/90 bg-white px-5 py-5 shadow-sm">
+              <h3 className={`${displayFont.className} text-2xl font-semibold text-[#0f1729]`}>Role-based access</h3>
+              <p className="mt-3 text-base leading-7 text-[#475569]">
+                Superadmin, administration, and member accounts each have strictly controlled permissions.
+              </p>
+            </article>
+            <article className="rounded-xl border border-slate-200/90 bg-white px-5 py-5 shadow-sm">
+              <h3 className={`${displayFont.className} text-2xl font-semibold text-[#0f1729]`}>Data transparency</h3>
+              <p className="mt-3 text-base leading-7 text-[#475569]">
+                Every member can independently verify their own contribution history through their personal portal.
+              </p>
+            </article>
+          </div>
         </div>
       </section>
 
