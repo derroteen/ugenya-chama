@@ -87,12 +87,12 @@ export default function Home() {
             <p className="mt-6 max-w-3xl text-lg leading-8">
               UAE is a community savings and welfare association supporting members and households across all its branches.
             </p>
-            <Link
-              href="/documents/UAE-Membership-Application-Form.pdf"
-              className="mt-10 inline-flex rounded-md bg-[#1d3a8a] px-6 py-3.5 text-base font-semibold text-white transition hover:bg-[#16306f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a] focus-visible:ring-offset-2"
-            >
-              Download Membership Application Form
-            </Link>
+            <href="/documents/UAE-Membership-Application-Form.pdf"
+  download="UAE-Membership-Application-Form.pdf"
+  className="mt-10 inline-flex rounded-md bg-[#1d3a8a] px-6 py-3.5 text-base font-semibold text-white transition hover:bg-[#16306f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a] focus-visible:ring-offset-2"
+>
+  Download Membership Application Form
+</a>
           </div>
         </div>
       </section>
@@ -265,12 +265,12 @@ export default function Home() {
           <p className="mt-6 max-w-4xl text-lg leading-8">
             To join UAE, download the membership application form, complete all required details, and submit the signed form to your nearest branch chairman for review and registration.
           </p>
-          <Link
-            href="/documents/UAE-Membership-Application-Form.pdf"
-            className="mt-10 inline-flex rounded-md bg-[#1d3a8a] px-6 py-3.5 text-base font-semibold text-white transition hover:bg-[#16306f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a] focus-visible:ring-offset-2"
-          >
-            Download Membership Application Form
-          </Link>
+          href="/documents/UAE-Membership-Application-Form.pdf"
+  download="UAE-Membership-Application-Form.pdf"
+  className="mt-10 inline-flex rounded-md bg-[#1d3a8a] px-6 py-3.5 text-base font-semibold text-white transition hover:bg-[#16306f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a] focus-visible:ring-offset-2"
+>
+  Download Membership Application Form
+</a>
         </div>
       </section>
 
