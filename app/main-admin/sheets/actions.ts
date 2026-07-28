@@ -1,10 +1,23 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 function revalidateSheetPath(branchId: string) {
   revalidatePath(`/main-admin/sheets/${branchId}`);
+}
+
+function getClientIpFromHeaders(headerStore: Headers) {
+  const forwardedFor = headerStore.get("x-forwarded-for");
+  if (forwardedFor) {
+    const first = forwardedFor.split(",")[0]?.trim();
+    if (first) return first;
+  }
+
+  const realIp = headerStore.get("x-real-ip")?.trim();
+  return realIp || "unknown";
 }
 
 export type SheetRow = {
@@ -299,6 +312,16 @@ export async function updateMonthlyEntry(
   withdrawalInput: string
 ): Promise<UpdateEntryResult> {
   try {
+    const requestHeaders = await headers();
+    const ip = getClientIpFromHeaders(requestHeaders);
+    const rateLimit = checkRateLimit(ip, "update_monthly_entry", 60);
+    if (!rateLimit.allowed) {
+      return {
+        status: "error",
+        message: "Too many row save attempts. Please try again in 15 minutes.",
+      };
+    }
+
     const { supabase } = await ensureAdminAccess();
 
     const kbgSharesBf = parseMoney(kbgSharesBfInput);
@@ -418,6 +441,16 @@ export async function updateMonthlyEntryFromForm(formData: FormData): Promise<vo
 
 export async function updateAllEntries(rows: UpdateAllEntriesInput[]): Promise<UpdateEntryResult> {
   try {
+    const requestHeaders = await headers();
+    const ip = getClientIpFromHeaders(requestHeaders);
+    const rateLimit = checkRateLimit(ip, "update_all_entries", 30);
+    if (!rateLimit.allowed) {
+      return {
+        status: "error",
+        message: "Too many bulk save attempts. Please try again in 15 minutes.",
+      };
+    }
+
     const { supabase } = await ensureAdminAccess();
 
     if (!Array.isArray(rows) || rows.length === 0) {

@@ -8,6 +8,16 @@ export type ProfileActionResult = {
   message: string;
 };
 
+const MAX_FULL_NAME_LENGTH = 120;
+const MAX_PHONE_LENGTH = 20;
+const MAX_MEMBER_ID_LENGTH = 20;
+
+function validateMaxLength(value: string, fieldName: string, maxLength: number) {
+  if (value.length > maxLength) {
+    throw new Error(`${fieldName} must be ${maxLength} characters or fewer.`);
+  }
+}
+
 function toErrorMessage(error: unknown) {
   if (error instanceof Error && error.message.trim()) {
     return error.message;
@@ -75,6 +85,10 @@ export async function updateMemberProfile(
     const status = String(formData.get("status") ?? "").trim();
     const kbgSharesBf = asOptionalNumber(formData.get("kbgSharesBf"));
     const sheetOrder = asOptionalPositiveInteger(formData.get("sheetOrder"));
+
+    validateMaxLength(fullName, "Full Name", MAX_FULL_NAME_LENGTH);
+    validateMaxLength(phone, "Phone", MAX_PHONE_LENGTH);
+    validateMaxLength(idNumber, "ID Number", MAX_MEMBER_ID_LENGTH);
 
     if (!fullName || !phone) {
       return { status: "error", message: "Full Name and Phone are required." };

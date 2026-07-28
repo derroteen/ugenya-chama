@@ -5,6 +5,9 @@ import { createAdminClient, createClient } from "@/lib/supabase/server";
 import type { NewAdminRole, NewAdminFormState } from "./form-state";
 
 const ALLOWED_ROLES: NewAdminRole[] = ["main_admin"];
+const MAX_FULL_NAME_LENGTH = 120;
+const MAX_EMAIL_LENGTH = 120;
+const MAX_ROLE_LENGTH = 30;
 
 function isAllowedRole(value: string): value is NewAdminRole {
   return ALLOWED_ROLES.includes(value as NewAdminRole);
@@ -21,6 +24,12 @@ function generateSecurePassword(length = 12) {
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
+}
+
+function validateMaxLength(value: string, fieldName: string, maxLength: number) {
+  if (value.length > maxLength) {
+    throw new Error(`${fieldName} must be ${maxLength} characters or fewer.`);
+  }
 }
 
 function toErrorMessage(error: unknown) {
@@ -68,6 +77,11 @@ export async function createAdminAccount(formData: FormData) {
   const fullName = String(formData.get("fullName") ?? "").trim();
   const email = normalizeEmail(String(formData.get("email") ?? ""));
   const roleInput = String(formData.get("role") ?? "").trim();
+
+  validateMaxLength(fullName, "Full Name", MAX_FULL_NAME_LENGTH);
+  validateMaxLength(email, "Email", MAX_EMAIL_LENGTH);
+  validateMaxLength(roleInput, "Role", MAX_ROLE_LENGTH);
+
   if (!fullName || !email || !roleInput) {
     throw new Error("Full Name, Email, and Role are required.");
   }
@@ -119,6 +133,24 @@ export async function createAdminAccountAction(
   const fullName = String(formData.get("fullName") ?? "").trim();
   const email = normalizeEmail(String(formData.get("email") ?? ""));
   const roleInput = String(formData.get("role") ?? "").trim();
+
+  try {
+    validateMaxLength(fullName, "Full Name", MAX_FULL_NAME_LENGTH);
+    validateMaxLength(email, "Email", MAX_EMAIL_LENGTH);
+    validateMaxLength(roleInput, "Role", MAX_ROLE_LENGTH);
+  } catch (error) {
+    return {
+      status: "error",
+      errorMessage: toErrorMessage(error),
+      defaults: {
+        fullName,
+        email,
+        role: isAllowedRole(roleInput) ? roleInput : "main_admin",
+        branchId: "",
+      },
+    };
+  }
+
   const defaults = {
     fullName,
     email,

@@ -5,6 +5,7 @@ import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { login } from "@/lib/auth/login";
 import { createClient } from "@/lib/supabase/client";
+import { checkLoginRateLimitAction } from "./actions";
 
 type BranchStatus = "idle" | "loading" | "valid" | "invalid";
 
@@ -87,6 +88,12 @@ function LoginPageContent() {
 
     if (branchCode && selectedBranch.status === "invalid") {
       setError("Branch not recognized - please go back and select your branch");
+      return;
+    }
+
+    const loginRateLimit = await checkLoginRateLimitAction();
+    if (!loginRateLimit.allowed) {
+      setError("Too many login attempts. Please try again in 15 minutes.");
       return;
     }
 

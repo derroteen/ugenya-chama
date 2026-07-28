@@ -13,9 +13,25 @@ type ActionResult = {
 const MARITAL_STATUSES = ["single", "married", "widowed"] as const;
 const EMPLOYMENT_STATUSES = ["employed", "self_employed", "unemployed"] as const;
 const PARENT_STATUSES = ["alive", "deceased"] as const;
+const MAX_GENERIC_TEXT_LENGTH = 120;
+const MAX_ID_NUMBER_LENGTH = 20;
+const MAX_PHONE_LENGTH = 20;
+
+function validateMaxLength(value: string, fieldName: string, maxLength: number) {
+  if (value.length > maxLength) {
+    throw new Error(`${fieldName} must be ${maxLength} characters or fewer.`);
+  }
+}
 
 function asOptionalText(value: FormDataEntryValue | null) {
   const normalized = String(value ?? "").trim();
+  validateMaxLength(normalized, "Field value", MAX_GENERIC_TEXT_LENGTH);
+  return normalized.length > 0 ? normalized : null;
+}
+
+function asOptionalTextWithMax(value: FormDataEntryValue | null, fieldName: string, maxLength: number) {
+  const normalized = String(value ?? "").trim();
+  validateMaxLength(normalized, fieldName, maxLength);
   return normalized.length > 0 ? normalized : null;
 }
 
@@ -115,7 +131,7 @@ export async function upsertFamilyDetails(memberId: string, formData: FormData):
       spouse_location: asOptionalText(formData.get("spouseLocation")),
       spouse_sub_location: asOptionalText(formData.get("spouseSubLocation")),
       spouse_village: asOptionalText(formData.get("spouseVillage")),
-      spouse_id_number: asOptionalText(formData.get("spouseIdNumber")),
+      spouse_id_number: asOptionalTextWithMax(formData.get("spouseIdNumber"), "Spouse ID Number", MAX_ID_NUMBER_LENGTH),
     };
 
     const { error } = await supabase
@@ -149,18 +165,18 @@ export async function upsertBeneficiaryDeclaration(
       member_id: memberId,
       father_name: asOptionalText(formData.get("fatherName")),
       father_date_of_birth: asOptionalDate(formData.get("fatherDateOfBirth")),
-      father_id_number: asOptionalText(formData.get("fatherIdNumber")),
+      father_id_number: asOptionalTextWithMax(formData.get("fatherIdNumber"), "Father ID Number", MAX_ID_NUMBER_LENGTH),
       father_status: asOptionalEnum(formData.get("fatherStatus"), PARENT_STATUSES),
       mother_name: asOptionalText(formData.get("motherName")),
       mother_date_of_birth: asOptionalDate(formData.get("motherDateOfBirth")),
-      mother_id_number: asOptionalText(formData.get("motherIdNumber")),
+      mother_id_number: asOptionalTextWithMax(formData.get("motherIdNumber"), "Mother ID Number", MAX_ID_NUMBER_LENGTH),
       mother_status: asOptionalEnum(formData.get("motherStatus"), PARENT_STATUSES),
       guardian_name: asOptionalText(formData.get("guardianName")),
       guardian_date_of_birth: asOptionalDate(formData.get("guardianDateOfBirth")),
-      guardian_id_number: asOptionalText(formData.get("guardianIdNumber")),
+      guardian_id_number: asOptionalTextWithMax(formData.get("guardianIdNumber"), "Guardian ID Number", MAX_ID_NUMBER_LENGTH),
       beneficiary_full_name: asOptionalText(formData.get("beneficiaryFullName")),
       beneficiary_date_of_birth: asOptionalDate(formData.get("beneficiaryDateOfBirth")),
-      beneficiary_mobile: asOptionalText(formData.get("beneficiaryMobile")),
+      beneficiary_mobile: asOptionalTextWithMax(formData.get("beneficiaryMobile"), "Beneficiary Mobile", MAX_PHONE_LENGTH),
       beneficiary_relationship: asOptionalText(formData.get("beneficiaryRelationship")),
     };
 
@@ -189,6 +205,7 @@ export async function addChild(memberId: string, formData: FormData): Promise<Ac
     const supabase = await ensureMemberWriteAccess(memberId);
 
     const fullName = String(formData.get("childName") ?? "").trim();
+    validateMaxLength(fullName, "Child Name", MAX_GENERIC_TEXT_LENGTH);
     const age = asOptionalNumber(formData.get("childAge"));
 
     if (!fullName) {
