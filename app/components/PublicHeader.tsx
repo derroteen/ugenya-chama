@@ -19,7 +19,7 @@ export default function PublicHeader({ brandClassName }: PublicHeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <header id="home" className="border-b border-[#1d3a8a] bg-[#0f1729]">
+    <header id="home" className="sticky top-0 z-50 border-b border-[#1d3a8a] bg-[#0f1729]">
       <div className="mx-auto w-full max-w-6xl px-4 py-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3">
