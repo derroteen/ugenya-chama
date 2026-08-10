@@ -19,7 +19,7 @@ export default function PublicHeader({ brandClassName }: PublicHeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <header id="home" className="border-b border-slate-200 bg-white">
+    <header id="home" className="border-b border-[#1d3a8a] bg-[#0f1729]">
       <div className="mx-auto w-full max-w-6xl px-4 py-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3">
@@ -31,19 +31,19 @@ export default function PublicHeader({ brandClassName }: PublicHeaderProps) {
               className="h-10 w-10 flex-none"
               priority
             />
-            <p className={`${brandClassName} truncate text-lg font-semibold text-[#0f1729] sm:text-xl`}>
+            <p className={`${brandClassName} truncate text-lg font-semibold text-white sm:text-xl`}>
               Ugenya Association Eldoret
             </p>
           </div>
 
           <div className="flex items-center gap-3">
             <nav aria-label="Primary" className="hidden md:block">
-              <ul className="flex items-center gap-6 text-sm font-semibold text-[#0f1729]">
+              <ul className="flex items-center gap-6 text-sm font-semibold text-white">
                 {navLinks.map((link) => (
                   <li key={link.href}>
                     <a
                       href={link.href}
-                      className="rounded-sm px-1 py-0.5 transition hover:text-[#1d3a8a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a]"
+                      className="rounded-sm px-1 py-0.5 transition hover:text-[#c9a227] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a]"
                     >
                       {link.label}
                     </a>
@@ -76,7 +76,7 @@ export default function PublicHeader({ brandClassName }: PublicHeaderProps) {
               aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
               aria-expanded={menuOpen}
               onClick={() => setMenuOpen((prev) => !prev)}
-              className="inline-flex items-center justify-center rounded-md border border-slate-300 p-2 text-[#0f1729] hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a] md:hidden"
+              className="inline-flex items-center justify-center rounded-md border border-slate-300 p-2 text-white hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a] md:hidden"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -99,13 +99,13 @@ export default function PublicHeader({ brandClassName }: PublicHeaderProps) {
 
         {menuOpen ? (
           <nav aria-label="Mobile Primary" className="mt-4 border-t border-slate-200 pt-4 md:hidden">
-            <ul className="space-y-2 text-sm font-semibold text-[#0f1729]">
+            <ul className="space-y-2 text-sm font-semibold text-white">
               {navLinks.map((link) => (
                 <li key={link.href}>
                   <a
                     href={link.href}
                     onClick={() => setMenuOpen(false)}
-                    className="block rounded-md px-2.5 py-2 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a]"
+                    className="block rounded-md px-2.5 py-2 transition hover:bg-slate-50 hover:text-[#c9a227] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a]"
                   >
                     {link.label}
                   </a>
