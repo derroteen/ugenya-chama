@@ -5,6 +5,12 @@ import { initialNewMemberFormState } from "./form-state";
 
 type AdminRole = "main_admin" | "superadmin" | "member";
 
+type PageProps = {
+  searchParams?:
+    | Promise<Record<string, string | string[] | undefined>>
+    | Record<string, string | string[] | undefined>;
+};
+
 function getJoinedBranchName(
   branchRelation: { name: string } | Array<{ name: string }> | null | undefined
 ) {
@@ -15,7 +21,7 @@ function getJoinedBranchName(
   return branchRelation.name ?? null;
 }
 
-export default async function NewMainAdminMemberPage() {
+export default async function NewMainAdminMemberPage({ searchParams }: PageProps) {
   const supabase = await createClient();
 
   const {
@@ -47,7 +53,21 @@ export default async function NewMainAdminMemberPage() {
     .select("id, name")
     .order("name", { ascending: true });
 
-  const displayBranchName = ownBranchName ?? "No branch assigned";
+  const resolvedParams = await Promise.resolve(searchParams ?? {});
+  const requestedBranchId = (() => {
+    const value = resolvedParams.branchId;
+    if (Array.isArray(value)) return value[0] ?? null;
+    return typeof value === "string" ? value : null;
+  })();
+
+  const selectedBranch =
+    requestedBranchId && branches
+      ? branches.find((branch) => branch.id === requestedBranchId) ?? null
+      : null;
+
+  const canChooseBranch = !selectedBranch;
+  const branchIdForForm = selectedBranch?.id ?? ownBranchId;
+  const displayBranchName = selectedBranch?.name ?? ownBranchName ?? "No branch assigned";
 
   return (
     <main className="bg-[#eef2ff] px-4 py-10 text-[#475569] sm:px-6 lg:px-8 lg:py-14">
@@ -72,12 +92,14 @@ export default async function NewMainAdminMemberPage() {
         </div>
 
         <p className="mt-3 text-sm text-slate-600 sm:text-base">
-          As {role === "superadmin" ? "Superadmin" : "Main Admin"}, you can choose any branch for this member.
+          {selectedBranch
+            ? `This member is being added directly to ${selectedBranch.name}.`
+            : `As ${role === "superadmin" ? "Superadmin" : "Main Admin"}, you can choose any branch for this member.`}
         </p>
 
         <NewMemberForm
-          canChooseBranch
-          defaultBranchId={ownBranchId}
+          canChooseBranch={canChooseBranch}
+          defaultBranchId={branchIdForForm}
           ownBranchName={ownBranchName}
           branchOptions={branches ?? []}
           initialState={initialNewMemberFormState}

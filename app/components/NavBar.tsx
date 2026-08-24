@@ -27,9 +27,11 @@ const roleLinks: Record<Role, NavLinkConfig[]> = {
   ],
   main_admin: [
     { label: "Dashboard", href: "/main-admin", icon: "dashboard" },
-    { label: "Members", href: "/main-admin/members", icon: "members" },
-    { label: "Contribution Sheets", href: "/main-admin/sheets", icon: "branches" },
     { label: "Branches", href: "/main-admin/branches", icon: "branches" },
+    { label: "All Members", href: "/main-admin/members", icon: "members" },
+    { label: "Business Activities", href: "/main-admin/business", icon: "branches" },
+    { label: "Financial Report", href: "/main-admin/financial-report", icon: "dashboard" },
+    { label: "Funeral Collections", href: "/main-admin/funeral-sheets", icon: "branches" },
     { label: "Settings", href: "/settings", icon: "settings" },
   ],
   member: [

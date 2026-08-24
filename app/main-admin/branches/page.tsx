@@ -72,19 +72,12 @@ export default async function MainAdminBranchesPage() {
                 {branch.activeMemberCount} Member{branch.activeMemberCount === 1 ? "" : "s"}
               </p>
 
-              <div className="mt-6 grid grid-cols-2 gap-3">
+              <div className="mt-6">
                 <Link
                   href={`/main-admin/branches/${branch.id}`}
-                  className="inline-flex items-center justify-center rounded-lg border border-[#1d3a8a]/20 bg-white px-3 py-2.5 text-sm font-semibold text-[#0f1729] transition hover:border-[#1d3a8a]/35 hover:bg-slate-50"
+                  className="inline-flex w-full items-center justify-center rounded-lg border border-[#1d3a8a]/20 bg-white px-3 py-2.5 text-sm font-semibold text-[#0f1729] transition hover:border-[#1d3a8a]/35 hover:bg-slate-50"
                 >
                   View Members
-                </Link>
-
-                <Link
-                  href={`/main-admin/sheets/${branch.id}`}
-                  className="inline-flex items-center justify-center rounded-lg bg-[#1d3a8a] px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-[#16306f]"
-                >
-                  Open Sheet
                 </Link>
               </div>
             </article>

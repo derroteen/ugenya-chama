@@ -29,7 +29,7 @@ function toNumber(value: unknown) {
   return 0;
 }
 
-async function ensureAdminAccess() {
+async function ensureSheetAccess(branchId?: string) {
   const supabase = await createClient();
 
   const {
@@ -42,19 +42,67 @@ async function ensureAdminAccess() {
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, branch_id")
     .eq("id", user.id)
     .single();
 
-  if (profileError || !profile || (profile.role !== "main_admin" && profile.role !== "superadmin")) {
-    throw new Error("You do not have permission to manage sheets.");
+  if (profileError || !profile) {
+    throw new Error("You do not have permission to access sheets.");
   }
 
-  return { supabase };
+  if (profile.role === "member") {
+    if (!branchId) {
+      throw new Error("Your branch could not be determined.");
+    }
+    if (profile.branch_id !== branchId) {
+      throw new Error("You can only download the blank sheet for your own branch.");
+    }
+    return { supabase, profile };
+  }
+
+  if (profile.role !== "main_admin" && profile.role !== "superadmin") {
+    throw new Error("You do not have permission to access sheets.");
+  }
+
+  return { supabase, profile };
+}
+
+export async function getMemberOwnBranchId(): Promise<string | null> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return null;
+  }
+
+  const { data: member, error } = await supabase
+    .from("members")
+    .select("branch_id")
+    .eq("auth_id", user.id)
+    .maybeSingle();
+
+  if (error || !member) {
+    return null;
+  }
+
+  return member.branch_id ?? null;
+}
+
+export async function generateMemberOwnBranchBlankSheet(): Promise<BlankCollectionSheetData> {
+  const branchId = await getMemberOwnBranchId();
+
+  if (!branchId) {
+    throw new Error("Your branch could not be determined.");
+  }
+
+  return generateBlankCollectionSheet(branchId);
 }
 
 export async function generateBlankCollectionSheet(branchId: string): Promise<BlankCollectionSheetData> {
-  const { supabase } = await ensureAdminAccess();
+  const { supabase } = await ensureSheetAccess(branchId);
 
   const { data: branch, error: branchError } = await supabase
     .from("branches")

@@ -482,6 +482,7 @@ create table if not exists funeral_collections (
   event_description text not null,
   collection_date date not null,
   amount numeric(12,2) not null default 0,
+  source text not null default 'cash' check (source in ('cash', 'emergency_fund')),
   created_by uuid references auth.users(id) on delete set null,
   created_at timestamptz default now()
 );

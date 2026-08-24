@@ -16,6 +16,7 @@ type CollectionRow = {
   event_description: string;
   collection_date: string;
   amount: number | string;
+  source?: string | null;
   branches: BranchRelation | BranchRelation[] | null;
   members: MemberRelation | MemberRelation[] | null;
 };
@@ -40,6 +41,12 @@ function toNumber(value: unknown) {
 
 function formatKsh(value: number) {
   return `KSH ${new Intl.NumberFormat("en-KE", { maximumFractionDigits: 0 }).format(value)}`;
+}
+
+function formatAmountWithSource(value: number | string, source?: string | null) {
+  const normalizedSource = String(source ?? "cash").trim().toLowerCase();
+  const label = normalizedSource === "emergency_fund" || normalizedSource === "emergency-fund" ? "Emergency Fund" : "Cash";
+  return `${formatKsh(toNumber(value))} (${label})`;
 }
 
 function formatDate(value: string) {
@@ -86,7 +93,7 @@ export default async function FuneralSheetsCombinedPage({ searchParams }: PagePr
 
   let query = supabase
     .from("funeral_collections")
-    .select("id, event_description, collection_date, amount, branches(name), members(member_id, full_name)")
+    .select("id, event_description, collection_date, amount, source, branches(name), members(member_id, full_name)")
     .order("name", { ascending: true, foreignTable: "branches" })
     .order("collection_date", { ascending: false });
 
@@ -175,7 +182,7 @@ export default async function FuneralSheetsCombinedPage({ searchParams }: PagePr
                         </td>
                         <td className="px-4 py-3 text-sm text-[#1d3a8a] sm:px-6">{member?.member_id ?? "-"}</td>
                         <td className="px-4 py-3 text-right text-sm font-semibold text-[#0f1729] sm:px-6">
-                          {formatKsh(toNumber(row.amount))}
+                          {formatAmountWithSource(row.amount, row.source)}
                         </td>
                       </tr>
                     );

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import DownloadOwnBranchBlankSheetButton from "./DownloadOwnBranchBlankSheetButton";
 
 function formatKsh(value: number) {
   return `KSH ${new Intl.NumberFormat("en-KE", {
@@ -105,6 +106,10 @@ export default async function MemberDashboardPage() {
         <p className="mt-4 max-w-3xl text-base leading-7 sm:text-lg">
           Your contribution history and welfare records will appear here.
         </p>
+
+        <div className="mt-6">
+          <DownloadOwnBranchBlankSheetButton />
+        </div>
 
         <section className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <article className="rounded-xl border border-[#1d3a8a]/20 bg-[#0f1729] px-5 py-5 text-white shadow-sm">

@@ -12,9 +12,12 @@ export type FuneralSheetMember = {
   sheetOrder: number | null;
 };
 
+export type FuneralCollectionSource = "cash" | "emergency_fund";
+
 export type FuneralCollectionRowInput = {
   memberId: string;
   amount: string;
+  source?: FuneralCollectionSource | string;
 };
 
 export type SaveFuneralCollectionsResult = {
@@ -41,6 +44,17 @@ function parseMoney(value: string) {
     throw new Error("Amounts must be non-negative numbers.");
   }
   return parsed;
+}
+
+function parseSource(value: string | undefined): FuneralCollectionSource {
+  const normalized = String(value ?? "cash").trim().toLowerCase();
+  if (normalized === "emergency_fund" || normalized === "emergency-fund") {
+    return "emergency_fund";
+  }
+  if (normalized === "cash") {
+    return "cash";
+  }
+  throw new Error("Source must be either Cash or Emergency Fund.");
 }
 
 async function ensureAdminAccess() {
@@ -130,19 +144,75 @@ export async function saveFuneralCollections(
       event_description: string;
       collection_date: string;
       amount: number;
+      source: FuneralCollectionSource;
       created_by: string;
     }> = [];
+
+    const emergencyFundRows = rows.filter((row) => {
+      try {
+        return parseSource(String(row.source ?? "cash")) === "emergency_fund";
+      } catch {
+        return false;
+      }
+    });
+
+    if (emergencyFundRows.length > 0) {
+      const month = date.slice(0, 7);
+      const memberIds = [...new Set(emergencyFundRows.map((row) => row.memberId))];
+      const { data: emergencyRows, error: emergencyRowsError } = await supabase
+        .from("emergency_contributions")
+        .select("member_id, emergency_balance")
+        .eq("branch_id", branchId)
+        .in("member_id", memberIds)
+        .eq("month", month);
+
+      if (emergencyRowsError) throw emergencyRowsError;
+
+      const emergencyBalanceByMember = new Map(
+        (emergencyRows ?? []).map((row) => [row.member_id, Number(row.emergency_balance ?? 0)])
+      );
+
+      for (let index = 0; index < rows.length; index += 1) {
+        const row = rows[index];
+        let amount: number;
+        let source: FuneralCollectionSource;
+
+        try {
+          amount = parseMoney(String(row.amount ?? ""));
+          source = parseSource(String(row.source ?? "cash"));
+        } catch {
+          return {
+            status: "error",
+            message: `Row ${index + 1}: Amount must be a non-negative number and source must be Cash or Emergency Fund.`,
+          };
+        }
+
+        if (amount <= 0) continue;
+
+        if (source === "emergency_fund") {
+          const availableBalance = emergencyBalanceByMember.get(row.memberId) ?? 0;
+          if (availableBalance < amount) {
+            return {
+              status: "error",
+              message: `Row ${index + 1}: Emergency fund deduction exceeds the available balance for this month (${availableBalance.toFixed(2)}).`,
+            };
+          }
+        }
+      }
+    }
 
     for (let index = 0; index < rows.length; index += 1) {
       const row = rows[index];
       let amount: number;
+      let source: FuneralCollectionSource;
 
       try {
         amount = parseMoney(String(row.amount ?? ""));
+        source = parseSource(String(row.source ?? "cash"));
       } catch {
         return {
           status: "error",
-          message: `Row ${index + 1}: Amount must be a non-negative number.`,
+          message: `Row ${index + 1}: Amount must be a non-negative number and source must be Cash or Emergency Fund.`,
         };
       }
 
@@ -153,6 +223,7 @@ export async function saveFuneralCollections(
           event_description: description,
           collection_date: date,
           amount,
+          source,
           created_by: userId,
         });
       }

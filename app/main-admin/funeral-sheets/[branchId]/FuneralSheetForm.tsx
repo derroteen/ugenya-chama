@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { saveFuneralCollections, type FuneralSheetMember } from "./actions";
+import { saveFuneralCollections, type FuneralCollectionSource, type FuneralSheetMember } from "./actions";
 
 type FuneralSheetFormProps = {
   branchId: string;
@@ -27,6 +27,9 @@ export default function FuneralSheetForm({ branchId, members }: FuneralSheetForm
   const [amounts, setAmounts] = useState<Record<string, string>>(() =>
     Object.fromEntries(members.map((member) => [member.memberId, ""]))
   );
+  const [sources, setSources] = useState<Record<string, FuneralCollectionSource>>(() =>
+    Object.fromEntries(members.map((member) => [member.memberId, "cash"]))
+  );
   const [isSaving, startSaving] = useTransition();
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -40,6 +43,10 @@ export default function FuneralSheetForm({ branchId, members }: FuneralSheetForm
     setAmounts((current) => ({ ...current, [memberId]: value }));
   }
 
+  function updateSource(memberId: string, value: FuneralCollectionSource) {
+    setSources((current) => ({ ...current, [memberId]: value }));
+  }
+
   function handleSaveAll() {
     setErrorMessage("");
     setSuccessMessage("");
@@ -49,7 +56,11 @@ export default function FuneralSheetForm({ branchId, members }: FuneralSheetForm
         branchId,
         eventDescription,
         collectionDate,
-        members.map((member) => ({ memberId: member.memberId, amount: amounts[member.memberId] ?? "" }))
+        members.map((member) => ({
+          memberId: member.memberId,
+          amount: amounts[member.memberId] ?? "",
+          source: sources[member.memberId] ?? "cash",
+        }))
       );
 
       if (result.status === "error") {
@@ -143,12 +154,13 @@ export default function FuneralSheetForm({ branchId, members }: FuneralSheetForm
                 <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Name</th>
                 <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Member ID</th>
                 <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Amount</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Source</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
               {members.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-sm text-slate-500">
+                  <td colSpan={5} className="px-4 py-8 text-center text-sm text-slate-500">
                     No active members in this branch.
                   </td>
                 </tr>
@@ -169,13 +181,23 @@ export default function FuneralSheetForm({ branchId, members }: FuneralSheetForm
                         className="w-32 rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
                       />
                     </td>
+                    <td className="px-3 py-3 text-sm text-slate-700">
+                      <select
+                        value={sources[member.memberId] ?? "cash"}
+                        onChange={(event) => updateSource(member.memberId, event.target.value as FuneralCollectionSource)}
+                        className="w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-700 outline-none transition focus:border-[#1d3a8a] focus:ring-2 focus:ring-[#bfdbfe]"
+                      >
+                        <option value="cash">Cash</option>
+                        <option value="emergency_fund">From Emergency Fund</option>
+                      </select>
+                    </td>
                   </tr>
                 ))
               )}
             </tbody>
             <tfoot className="bg-[#f8fbff]">
               <tr>
-                <td colSpan={3} className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-600">
+                <td colSpan={4} className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-600">
                   Total
                 </td>
                 <td className="px-3 py-3 text-sm font-semibold text-[#0f1729]">{formatKsh(total)}</td>

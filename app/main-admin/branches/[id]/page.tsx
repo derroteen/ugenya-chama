@@ -157,29 +157,41 @@ export default async function MainAdminBranchDetailsPage({ params }: PageProps) 
           <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-6">
             <h2 className="text-2xl font-semibold text-[#0f1729] [font-family:var(--font-uae-display)]">Quick Actions</h2>
 
-            <div className="mt-5 flex flex-wrap items-center gap-3">
+            <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <Link
                 href={`/main-admin/sheets/${branch.id}?month=${currentMonth}`}
-                className="inline-flex items-center justify-center rounded-lg bg-[#1d3a8a] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#16306f]"
+                className="rounded-2xl border border-[#1d3a8a]/20 bg-[#1d3a8a] p-5 text-left text-white shadow-sm transition hover:bg-[#16306f]"
               >
-                Open Contribution Sheet
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#dbeafe]">Monthly</p>
+                <p className="mt-3 text-xl font-semibold">Open Contribution Sheet</p>
+                <p className="mt-2 text-sm text-slate-200">Update this branch&apos;s savings and emergency entries.</p>
               </Link>
 
-              <DownloadBlankSheetButton branchId={branch.id} />
+              <Link
+                href={`/main-admin/members/new?branchId=${branch.id}`}
+                className="rounded-2xl border border-[#1d3a8a]/20 bg-white p-5 text-left text-[#0f1729] shadow-sm transition hover:border-[#1d3a8a]/35 hover:bg-slate-50"
+              >
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#1d3a8a]">Members</p>
+                <p className="mt-3 text-xl font-semibold">Add New Member</p>
+                <p className="mt-2 text-sm text-slate-600">Create a member directly for this branch.</p>
+              </Link>
 
               <Link
                 href={`/main-admin/funeral-sheets/${branch.id}`}
-                className="inline-flex items-center justify-center rounded-lg border border-[#1d3a8a]/20 bg-white px-5 py-2.5 text-sm font-semibold text-[#0f1729] transition hover:border-[#1d3a8a]/35 hover:bg-slate-50"
+                className="rounded-2xl border border-[#1d3a8a]/20 bg-white p-5 text-left text-[#0f1729] shadow-sm transition hover:border-[#1d3a8a]/35 hover:bg-slate-50"
               >
-                Funeral Collection Sheet
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#1d3a8a]">Welfare</p>
+                <p className="mt-3 text-xl font-semibold">Funeral Collection Sheet</p>
+                <p className="mt-2 text-sm text-slate-600">Record one-off funeral or emergency collections.</p>
               </Link>
 
-              <Link
-                href="/main-admin/branches"
-                className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-[#0f1729] transition hover:bg-slate-50"
-              >
-                ← All Branches
-              </Link>
+              <div className="rounded-2xl border border-[#1d3a8a]/20 bg-white p-5 text-left text-[#0f1729] shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#1d3a8a]">Documents</p>
+                <p className="mt-3 text-xl font-semibold">Download Blank Sheet</p>
+                <div className="mt-4">
+                  <DownloadBlankSheetButton branchId={branch.id} />
+                </div>
+              </div>
             </div>
           </section>
         </div>
