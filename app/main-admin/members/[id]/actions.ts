@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { createAdminClient, createClient } from "@/lib/supabase/server";
 
 type AdminRole = "main_admin" | "superadmin";
 
@@ -269,4 +270,70 @@ export async function deleteChild(memberId: string, formData: FormData): Promise
       message: toErrorMessage(error),
     };
   }
+}
+
+export async function deleteMember(memberId: string): Promise<void> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("Your session has expired. Please sign in again.");
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (profileError || !profile) {
+    throw new Error("Could not load your admin profile.");
+  }
+
+  const role = profile.role as AdminRole | null;
+  if (role !== "main_admin" && role !== "superadmin") {
+    throw new Error("You do not have permission to delete members.");
+  }
+
+  const { data: member, error: memberError } = await supabase
+    .from("members")
+    .select("id, member_id, auth_id")
+    .eq("id", memberId)
+    .maybeSingle();
+
+  if (memberError || !member) {
+    throw new Error("Member not found.");
+  }
+
+  const admin = createAdminClient();
+
+  if (member.auth_id) {
+    const { error: deleteUserError } = await admin.auth.admin.deleteUser(member.auth_id);
+    if (deleteUserError) {
+      throw deleteUserError;
+    }
+  }
+
+  const { error: deleteMemberError } = await supabase
+    .from("members")
+    .delete()
+    .eq("id", memberId);
+
+  if (deleteMemberError) {
+    throw deleteMemberError;
+  }
+
+  const { error: recycledError } = await supabase
+    .from("recycled_member_ids")
+    .insert({ member_id: member.member_id });
+
+  if (recycledError) {
+    throw recycledError;
+  }
+
+  revalidatePath("/main-admin/members");
+  redirect("/main-admin/members");
 }

@@ -71,14 +71,36 @@ export async function createMember(input: CreateMemberInput) {
 
   const supabase = await createClient()
 
-  // 1. Generate the branch-scoped member ID via the DB function
-  // SAFE: parameterized via Supabase client (fixed RPC name + named argument payload)
-  const { data: memberIdData, error: idError } = await supabase.rpc(
-    'generate_member_id',
-    { p_branch_id: branchId }
-  )
-  if (idError) throw idError
-  const memberId: string = memberIdData
+  let memberId: string
+
+  const { data: recycledMember, error: recycledError } = await supabase
+    .from('recycled_member_ids')
+    .select('member_id')
+    .order('member_id', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+
+  if (recycledError) throw recycledError
+
+  if (recycledMember?.member_id) {
+    memberId = recycledMember.member_id
+
+    const { error: deleteRecycledError } = await supabase
+      .from('recycled_member_ids')
+      .delete()
+      .eq('member_id', memberId)
+
+    if (deleteRecycledError) throw deleteRecycledError
+  } else {
+    // 1. Generate the branch-scoped member ID via the DB function
+    // SAFE: parameterized via Supabase client (fixed RPC name + named argument payload)
+    const { data: memberIdData, error: idError } = await supabase.rpc(
+      'generate_member_id',
+      { p_branch_id: branchId }
+    )
+    if (idError) throw idError
+    memberId = memberIdData
+  }
 
   const normalizedPhone = normalizePhone(phone)
   const initialPassword = toLocalPhoneFormat(normalizedPhone)

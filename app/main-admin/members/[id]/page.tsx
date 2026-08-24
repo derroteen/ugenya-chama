@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import DeleteMemberButton from "./DeleteMemberButton";
 import MemberDetailsTabs from "./MemberDetailsTabs";
 import MemberProfileForm from "./MemberProfileForm";
 
@@ -241,6 +242,14 @@ export default async function MainAdminMemberDetailsPage({ params }: PageProps) 
             beneficiaryDeclaration={(beneficiaryDeclaration ?? null) as BeneficiaryDeclaration | null}
           />
         </section>
+
+        <div className="mt-10 border-t border-slate-200 pt-6">
+          <DeleteMemberButton
+            memberId={memberRecord.id}
+            memberName={memberRecord.full_name}
+            memberNumber={memberRecord.member_id}
+          />
+        </div>
       </section>
     </main>
   );

@@ -43,6 +43,12 @@ create table if not exists members (
   created_at timestamptz not null default now()
 );
 
+create table if not exists recycled_member_ids (
+  id uuid primary key default gen_random_uuid(),
+  member_id text not null unique,
+  recycled_at timestamptz default now()
+);
+
 alter table members add column if not exists kbg_shares_bf numeric(12,2);
 alter table members add column if not exists sheet_order integer default null;
 
