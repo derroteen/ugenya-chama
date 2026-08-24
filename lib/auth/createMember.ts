@@ -103,6 +103,36 @@ export async function createMember(input: CreateMemberInput) {
   }
 
   const normalizedPhone = normalizePhone(phone)
+
+  const { data: existingPhoneMember, error: phoneLookupError } = await supabase
+    .from('members')
+    .select('member_id')
+    .eq('phone', normalizedPhone)
+    .maybeSingle()
+
+  if (phoneLookupError) throw phoneLookupError
+  if (existingPhoneMember?.member_id) {
+    throw new Error(`A member with this phone number already exists (Member ID: ${existingPhoneMember.member_id}).`)
+  }
+
+  const normalizedFullName = fullName.trim()
+  const { data: allMembersForNameCheck, error: nameLookupError } = await supabase
+    .from('members')
+    .select('member_id, full_name')
+
+  if (nameLookupError) throw nameLookupError
+
+  const duplicateNameMatch = allMembersForNameCheck?.find((member) => {
+    const candidate = String(member.full_name ?? '').trim().toUpperCase()
+    return candidate === normalizedFullName.toUpperCase()
+  })
+
+  if (duplicateNameMatch?.member_id) {
+    throw new Error(
+      `A member with the name ${duplicateNameMatch.full_name} already exists (Member ID: ${duplicateNameMatch.member_id}). Please verify this is not a duplicate.`
+    )
+  }
+
   const initialPassword = toLocalPhoneFormat(normalizedPhone)
   const email = memberIdToEmail(memberId)
 
