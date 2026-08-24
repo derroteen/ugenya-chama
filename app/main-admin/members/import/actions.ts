@@ -103,6 +103,8 @@ export async function bulkImportMembers(
         success: false,
         error: toErrorMessage(error),
       });
+    } finally {
+      await new Promise((resolve) => setTimeout(resolve, 3000));
     }
   }
 
