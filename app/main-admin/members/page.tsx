@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import MembersFilters from "./MembersFilters";
 
 type AdminRole = "main_admin" | "superadmin";
 
@@ -139,51 +140,7 @@ export default async function MainAdminMembersPage({ searchParams }: PageProps) 
           </div>
         </div>
 
-        <form method="get" className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div>
-              <label htmlFor="branch" className="mb-2 block text-sm font-semibold text-[#0f1729]">
-                Branch
-              </label>
-              <select
-                id="branch"
-                name="branch"
-                defaultValue={selectedBranch?.code ?? ""}
-                className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 outline-none transition focus:border-[#1d3a8a] focus:ring-2 focus:ring-[#bfdbfe]"
-              >
-                <option value="">All Branches</option>
-                {branchOptions.map((branch) => (
-                  <option key={branch.id} value={branch.code}>
-                    {branch.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="q" className="mb-2 block text-sm font-semibold text-[#0f1729]">
-                Search Members
-              </label>
-              <input
-                id="q"
-                name="q"
-                type="search"
-                defaultValue={q}
-                placeholder="Search by full name or member ID"
-                className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 outline-none transition focus:border-[#1d3a8a] focus:ring-2 focus:ring-[#bfdbfe]"
-              />
-            </div>
-
-            <div className="flex items-end">
-              <button
-                type="submit"
-                className="inline-flex w-full items-center justify-center rounded-lg bg-[#1d3a8a] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#16306f]"
-              >
-                Apply Filters
-              </button>
-            </div>
-          </div>
-        </form>
+        <MembersFilters branches={branchOptions} branch={selectedBranch?.code ?? ""} q={q} />
 
         {rows.length === 0 ? (
           <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 px-5 py-8 text-center">

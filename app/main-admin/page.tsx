@@ -168,14 +168,44 @@ export default async function MainAdminDashboardPage() {
               <p className="mt-1 text-sm text-slate-600">Record monthly and emergency sheet values by branch.</p>
             </Link>
 
+            <Link
+              href="/main-admin/funeral-sheets"
+              className="rounded-xl border border-[#1d3a8a]/20 bg-[#f8fbff] px-5 py-5 transition hover:border-[#1d3a8a]/40 hover:shadow-sm"
+            >
+              <p className="text-lg font-semibold text-[#0f1729]">Funeral / Emergency Collections</p>
+              <p className="mt-1 text-sm text-slate-600">
+                Browse one-off funeral or emergency-event collections across all branches.
+              </p>
+            </Link>
+
+            <Link
+              href="/main-admin/business"
+              className="rounded-xl border border-[#1d3a8a]/20 bg-[#f8fbff] px-5 py-5 transition hover:border-[#1d3a8a]/40 hover:shadow-sm"
+            >
+              <p className="text-lg font-semibold text-[#0f1729]">Business Activities</p>
+              <p className="mt-1 text-sm text-slate-600">
+                Track income and expenses for association-run ventures like the van hire business.
+              </p>
+            </Link>
+
             {profile && (profile.role === "main_admin" || profile.role === "superadmin") ? (
-              <Link
-                href="/main-admin/reports"
-                className="rounded-xl border border-[#1d3a8a]/20 bg-[#f8fbff] px-5 py-5 transition hover:border-[#1d3a8a]/40 hover:shadow-sm"
-              >
-                <p className="text-lg font-semibold text-[#0f1729]">Generate Monthly PDF Report</p>
-                <p className="mt-1 text-sm text-slate-600">Download a combined all-branches monthly report in PDF format.</p>
-              </Link>
+              <>
+                <Link
+                  href="/main-admin/reports"
+                  className="rounded-xl border border-[#1d3a8a]/20 bg-[#f8fbff] px-5 py-5 transition hover:border-[#1d3a8a]/40 hover:shadow-sm"
+                >
+                  <p className="text-lg font-semibold text-[#0f1729]">Generate Monthly PDF Report</p>
+                  <p className="mt-1 text-sm text-slate-600">Download a combined all-branches monthly report in PDF format.</p>
+                </Link>
+
+                <Link
+                  href="/main-admin/financial-report"
+                  className="rounded-xl border border-[#1d3a8a]/20 bg-[#f8fbff] px-5 py-5 transition hover:border-[#1d3a8a]/40 hover:shadow-sm"
+                >
+                  <p className="text-lg font-semibold text-[#0f1729]">Generate Financial Summary PDF</p>
+                  <p className="mt-1 text-sm text-slate-600">Review savings, emergency fund, and business performance in one monthly report.</p>
+                </Link>
+              </>
             ) : null}
           </div>
         </section>

@@ -98,6 +98,37 @@ export async function updateMemberProfile(
       return { status: "error", message: "Invalid member status." };
     }
 
+    if (sheetOrder !== null) {
+      const { data: currentMember, error: currentMemberError } = await supabase
+        .from("members")
+        .select("branch_id")
+        .eq("id", memberId)
+        .single();
+
+      if (currentMemberError || !currentMember) {
+        throw currentMemberError ?? new Error("Member not found.");
+      }
+
+      const { data: conflictingMember, error: conflictError } = await supabase
+        .from("members")
+        .select("full_name")
+        .eq("branch_id", currentMember.branch_id)
+        .eq("sheet_order", sheetOrder)
+        .neq("id", memberId)
+        .maybeSingle();
+
+      if (conflictError) {
+        throw conflictError;
+      }
+
+      if (conflictingMember) {
+        return {
+          status: "error",
+          message: `Sheet position ${sheetOrder} is already assigned to ${conflictingMember.full_name} in this branch. Choose a different position.`,
+        };
+      }
+    }
+
     const { error } = await supabase
       .from("members")
       .update({

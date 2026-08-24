@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import DownloadBlankSheetButton from "./DownloadBlankSheetButton";
 
 type PageProps = {
   params: Promise<{ id: string }> | { id: string };
@@ -162,6 +163,15 @@ export default async function MainAdminBranchDetailsPage({ params }: PageProps) 
                 className="inline-flex items-center justify-center rounded-lg bg-[#1d3a8a] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#16306f]"
               >
                 Open Contribution Sheet
+              </Link>
+
+              <DownloadBlankSheetButton branchId={branch.id} />
+
+              <Link
+                href={`/main-admin/funeral-sheets/${branch.id}`}
+                className="inline-flex items-center justify-center rounded-lg border border-[#1d3a8a]/20 bg-white px-5 py-2.5 text-sm font-semibold text-[#0f1729] transition hover:border-[#1d3a8a]/35 hover:bg-slate-50"
+              >
+                Funeral Collection Sheet
               </Link>
 
               <Link

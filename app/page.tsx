@@ -28,6 +28,39 @@ const branches = [
   "East Huruma",
 ];
 
+const galleryImages = [
+  {
+    src: "/images/gallery/community-1.jpg",
+    alt: "Community activity placeholder 1",
+    caption: "Van Hire Business",
+  },
+  {
+    src: "/images/gallery/community-2.jpg",
+    alt: "Community activity placeholder 2",
+    caption: "Branch Meeting",
+  },
+  {
+    src: "/images/gallery/community-3.jpg",
+    alt: "Community activity placeholder 3",
+    caption: "Member Gathering",
+  },
+  {
+    src: "/images/gallery/community-4.jpg",
+    alt: "Community activity placeholder 4",
+    caption: "Community Outreach",
+  },
+  {
+    src: "/images/gallery/community-5.jpg",
+    alt: "Community activity placeholder 5",
+    caption: "Savings Group Session",
+  },
+  {
+    src: "/images/gallery/community-6.jpg",
+    alt: "Community activity placeholder 6",
+    caption: "Welfare Engagement",
+  },
+];
+
 export default function Home() {
   const year = new Date().getFullYear();
 
@@ -247,6 +280,34 @@ export default function Home() {
             <p className="text-base leading-7 text-[#475569]">
               All records are managed by the association&apos;s administration and updated monthly. Members can view their own records at any time through the member portal.
             </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="gallery" className="relative overflow-hidden bg-white">
+        <div className="relative mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 sm:py-24 lg:px-8 lg:py-28">
+          <div className="flex items-center gap-3">
+            <h2 className={`${displayFont.className} text-3xl font-bold text-[#0f1729] sm:text-4xl`}>Community &amp; Activities</h2>
+            <div className="h-px flex-1 bg-slate-200" aria-hidden="true" />
+          </div>
+
+          <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {galleryImages.map((image) => (
+              <figure key={image.src} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+                <div className="relative h-72 w-full overflow-hidden bg-slate-200">
+                  <Image
+                    src={image.src}
+                    alt={image.alt}
+                    fill
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    className="object-cover"
+                  />
+                </div>
+                <figcaption className="border-t border-slate-200 bg-[#f8fbff] px-4 py-3 text-sm font-medium text-[#0f1729]">
+                  {image.caption}
+                </figcaption>
+              </figure>
+            ))}
           </div>
         </div>
       </section>

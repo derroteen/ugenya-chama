@@ -352,7 +352,7 @@ export async function updateMonthlyEntry(
       throw emergencyRowError ?? new Error("Emergency row not found.");
     }
 
-    const cumulativeSaving = kbgSharesBf + oldSavingsBf + previousBalanceBf + subs;
+    const cumulativeSaving = oldSavingsBf + previousBalanceBf + subs;
     const cumulativeEmergFund = previousEmergBf + emergSubs;
     const emergencyBalance = cumulativeEmergFund - withdrawal;
 
@@ -588,7 +588,7 @@ export async function updateAllEntries(rows: UpdateAllEntriesInput[]): Promise<U
       const member = Array.isArray(memberRelation) ? memberRelation[0] : memberRelation;
       const memberLabel = member?.full_name ?? member?.member_id ?? "Unknown Member";
 
-      const cumulativeSaving = kbgSharesBf + oldSavingsBf + previousBalanceBf + subs;
+      const cumulativeSaving = oldSavingsBf + previousBalanceBf + subs;
       const cumulativeEmergFund = previousEmergBf + emergSubs;
       const emergencyBalance = cumulativeEmergFund - withdrawal;
 

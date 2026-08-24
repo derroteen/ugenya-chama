@@ -467,3 +467,101 @@ insert into branches (name, code) values
   ('Kisumu Ndogo', 'KSD'),
   ('East Huruma', 'EHU')
 on conflict (code) do nothing;
+
+-- ============================================================
+-- FUNERAL / EMERGENCY-EVENT COLLECTION SHEETS
+-- One-off collections for a specific funeral or emergency event, per
+-- branch. Separate from the regular monthly emergency_contributions
+-- fund tracking above.
+-- ============================================================
+
+create table if not exists funeral_collections (
+  id uuid primary key default gen_random_uuid(),
+  branch_id uuid not null references branches(id),
+  member_id uuid not null references members(id),
+  event_description text not null,
+  collection_date date not null,
+  amount numeric(12,2) not null default 0,
+  created_by uuid references auth.users(id) on delete set null,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_funeral_collections_branch on funeral_collections(branch_id);
+create index if not exists idx_funeral_collections_member on funeral_collections(member_id);
+create index if not exists idx_funeral_collections_date on funeral_collections(collection_date);
+
+alter table funeral_collections
+  add constraint funeral_collections_unique_entry
+  unique (branch_id, member_id, event_description, collection_date);
+
+alter table funeral_collections enable row level security;
+
+drop policy if exists "funeral_collections_select" on funeral_collections;
+create policy "funeral_collections_select" on funeral_collections
+  for select using (
+    my_role() in ('superadmin','main_admin')
+    or member_id in (select id from members where auth_id = auth.uid())
+  );
+
+drop policy if exists "funeral_collections_write" on funeral_collections;
+create policy "funeral_collections_write" on funeral_collections
+  for all using (my_role() in ('superadmin','main_admin'))
+  with check (my_role() in ('superadmin','main_admin'));
+
+-- ============================================================
+-- BUSINESS VENTURES (association-run income-generating activities)
+-- Starts with the car hire (van) business; structured as a generic
+-- venture + transaction ledger so other ventures can be added later
+-- (as new business_ventures rows) without further schema changes.
+-- ============================================================
+
+create table if not exists business_ventures (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  description text,
+  active boolean default true,
+  created_at timestamptz default now()
+);
+
+create table if not exists business_transactions (
+  id uuid primary key default gen_random_uuid(),
+  venture_id uuid not null references business_ventures(id),
+  transaction_date date not null,
+  transaction_type text not null check (transaction_type in
+    ('income', 'fuel', 'driver_payment', 'maintenance', 'other_expense')),
+  description text,
+  amount numeric(12,2) not null,
+  created_by uuid references auth.users(id) on delete set null,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_business_transactions_venture on business_transactions(venture_id);
+create index if not exists idx_business_transactions_date on business_transactions(transaction_date);
+
+alter table business_ventures enable row level security;
+alter table business_transactions enable row level security;
+
+drop policy if exists "business_ventures_select" on business_ventures;
+create policy "business_ventures_select" on business_ventures
+  for select using (my_role() in ('superadmin','main_admin'));
+
+drop policy if exists "business_ventures_write" on business_ventures;
+create policy "business_ventures_write" on business_ventures
+  for all using (my_role() in ('superadmin','main_admin'))
+  with check (my_role() in ('superadmin','main_admin'));
+
+drop policy if exists "business_transactions_select" on business_transactions;
+create policy "business_transactions_select" on business_transactions
+  for select using (my_role() in ('superadmin','main_admin'));
+
+drop policy if exists "business_transactions_write" on business_transactions;
+create policy "business_transactions_write" on business_transactions
+  for all using (my_role() in ('superadmin','main_admin'))
+  with check (my_role() in ('superadmin','main_admin'));
+
+-- Seed the first venture. Guarded with a where-not-exists check since
+-- there is no unique constraint on name to hang "on conflict" off of -
+-- safe to run this block more than once.
+insert into business_ventures (name, description)
+select 'Van Hire', 'Car hire business using the association van'
+where not exists (select 1 from business_ventures where name = 'Van Hire');

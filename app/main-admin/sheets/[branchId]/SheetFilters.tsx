@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type BranchOption = {
@@ -19,33 +19,26 @@ export default function SheetFilters({ branches, currentBranchId, month, isSheet
   const router = useRouter();
   const [selectedBranchId, setSelectedBranchId] = useState(currentBranchId);
   const [selectedMonth, setSelectedMonth] = useState(month);
-  const [sheetOpen, setSheetOpen] = useState(isSheetOpen);
 
   useEffect(() => {
     setSelectedBranchId(currentBranchId);
     setSelectedMonth(month);
-    setSheetOpen(isSheetOpen);
-  }, [currentBranchId, month, isSheetOpen]);
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!selectedBranchId) return;
-    setSheetOpen(true);
-    router.push(`/main-admin/sheets/${selectedBranchId}?month=${selectedMonth}`);
-  }
+  }, [currentBranchId, month]);
 
   function handleBranchChange(value: string) {
     setSelectedBranchId(value);
-    setSheetOpen(false);
+    if (!value) return;
+    router.push(`/main-admin/sheets/${value}?month=${selectedMonth}`);
   }
 
   function handleMonthChange(value: string) {
     setSelectedMonth(value);
-    setSheetOpen(false);
+    if (!selectedBranchId || !value) return;
+    router.push(`/main-admin/sheets/${selectedBranchId}?month=${value}`);
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+    <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="sm:col-span-2">
           <label htmlFor="branchId" className="mb-2 block text-sm font-semibold text-[#0f1729]">
@@ -79,15 +72,17 @@ export default function SheetFilters({ branches, currentBranchId, month, isSheet
         </div>
 
         <div className="flex items-end">
-          <button
-            type="submit"
-            disabled={sheetOpen}
-            className="inline-flex w-full items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-70 bg-[#1d3a8a] text-white hover:bg-[#16306f] disabled:bg-slate-200 disabled:text-slate-600"
+          <span
+            className={`inline-flex w-full items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold ${
+              isSheetOpen
+                ? "border border-emerald-300 bg-emerald-50 text-emerald-800"
+                : "bg-slate-200 text-slate-600"
+            }`}
           >
-            {sheetOpen ? "Sheet Open ✓" : "Open Sheet"}
-          </button>
+            {isSheetOpen ? "Sheet Open ✓" : "Loading…"}
+          </span>
         </div>
       </div>
-    </form>
+    </div>
   );
 }
