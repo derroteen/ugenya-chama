@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" role="img" aria-labelledby="title desc">
+  <title id="title">Community placeholder 4</title>
+  <desc id="desc">UAE navy and gold gradient placeholder image with a centered photo icon.</desc>
+  <defs>
+    <linearGradient id="bg4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1d3a8a"/>
+      <stop offset="100%" stop-color="#c9a227"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#bg4)"/>
+  <g opacity="0.18" fill="#ffffff">
+    <path d="M240 260c0-43 35-78 78-78h64c43 0 78 35 78 78v30c0 18-5 36-14 51l-27 42H281l-27-42c-9-15-14-33-14-51v-30zm109-52a52 52 0 1 1 0 104 52 52 0 0 1 0-104z"/>
+    <rect x="380" y="210" width="180" height="120" rx="18"/>
+    <path d="M510 365h-170c-13 0-23 10-23 23v28h216v-28c0-13-10-23-23-23z"/>
+  </g>
+  <g opacity="0.14" fill="#ffffff">
+    <circle cx="180" cy="130" r="50"/>
+    <circle cx="630" cy="145" r="44"/>
+    <path d="M585 460l115-115 75 75v115H585z"/>
+  </g>
+</svg>

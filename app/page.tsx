@@ -30,32 +30,32 @@ const branches = [
 
 const galleryImages = [
   {
-    src: "/images/gallery/community-1.jpg",
+    src: "/images/gallery/community-1.svg",
     alt: "Community activity placeholder 1",
     caption: "Van Hire Business",
   },
   {
-    src: "/images/gallery/community-2.jpg",
+    src: "/images/gallery/community-2.svg",
     alt: "Community activity placeholder 2",
     caption: "Branch Meeting",
   },
   {
-    src: "/images/gallery/community-3.jpg",
+    src: "/images/gallery/community-3.svg",
     alt: "Community activity placeholder 3",
     caption: "Member Gathering",
   },
   {
-    src: "/images/gallery/community-4.jpg",
+    src: "/images/gallery/community-4.svg",
     alt: "Community activity placeholder 4",
     caption: "Community Outreach",
   },
   {
-    src: "/images/gallery/community-5.jpg",
+    src: "/images/gallery/community-5.svg",
     alt: "Community activity placeholder 5",
     caption: "Savings Group Session",
   },
   {
-    src: "/images/gallery/community-6.jpg",
+    src: "/images/gallery/community-6.svg",
     alt: "Community activity placeholder 6",
     caption: "Welfare Engagement",
   },
@@ -301,6 +301,7 @@ export default function Home() {
                     fill
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     className="object-cover"
+                    unoptimized
                   />
                 </div>
                 <figcaption className="border-t border-slate-200 bg-[#f8fbff] px-4 py-3 text-sm font-medium text-[#0f1729]">
