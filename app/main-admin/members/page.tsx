@@ -123,12 +123,20 @@ export default async function MainAdminMembersPage({ searchParams }: PageProps) 
               Members
             </h1>
           </div>
-          <Link
-            href="/main-admin/members/new"
-            className="inline-flex items-center rounded-lg bg-[#1d3a8a] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#16306f]"
-          >
-            Add Member
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/main-admin/members/import"
+              className="inline-flex items-center rounded-lg border border-[#1d3a8a]/20 bg-white px-4 py-2.5 text-sm font-semibold text-[#0f1729] transition hover:border-[#1d3a8a]/35 hover:bg-slate-50"
+            >
+              Import Members
+            </Link>
+            <Link
+              href="/main-admin/members/new"
+              className="inline-flex items-center rounded-lg bg-[#1d3a8a] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#16306f]"
+            >
+              Add Member
+            </Link>
+          </div>
         </div>
 
         <form method="get" className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
