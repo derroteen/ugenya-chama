@@ -317,13 +317,18 @@ export async function deleteMember(memberId: string): Promise<void> {
     }
   }
 
-  const { error: deleteMemberError } = await supabase
+  const { data: deletedRows, error: deleteMemberError } = await supabase
     .from("members")
     .delete()
-    .eq("id", memberId);
+    .eq("id", memberId)
+    .select();
 
   if (deleteMemberError) {
     throw deleteMemberError;
+  }
+
+  if (!deletedRows || deletedRows.length === 0) {
+    throw new Error("Member deletion was blocked (no rows affected). This is likely a permissions issue — contact support.");
   }
 
   const { error: recycledError } = await supabase
