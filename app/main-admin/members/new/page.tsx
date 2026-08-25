@@ -65,6 +65,8 @@ export default async function NewMainAdminMemberPage({ searchParams }: PageProps
       ? branches.find((branch) => branch.id === requestedBranchId) ?? null
       : null;
 
+  const backLinkHref = requestedBranchId ? `/main-admin/branches/${requestedBranchId}` : "/main-admin/members";
+
   const canChooseBranch = !selectedBranch;
   const branchIdForForm = selectedBranch?.id ?? ownBranchId;
   const displayBranchName = selectedBranch?.name ?? ownBranchName ?? "No branch assigned";
@@ -80,7 +82,7 @@ export default async function NewMainAdminMemberPage({ searchParams }: PageProps
             </h1>
           </div>
           <Link
-            href="/main-admin/members"
+            href={backLinkHref}
             className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-[#0f1729] transition hover:bg-slate-50"
           >
             Back to Members
