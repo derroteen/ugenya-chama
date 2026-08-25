@@ -119,6 +119,7 @@ export async function createMember(input: CreateMemberInput) {
   const { data: allMembersForNameCheck, error: nameLookupError } = await supabase
     .from('members')
     .select('member_id, full_name')
+    .eq('branch_id', branchId)
 
   if (nameLookupError) throw nameLookupError
 
