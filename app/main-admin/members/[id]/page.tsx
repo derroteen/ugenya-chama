@@ -192,7 +192,7 @@ export default async function MainAdminMemberDetailsPage({ params }: PageProps) 
             </p>
           </div>
           <Link
-            href="/main-admin/members"
+            href={`/main-admin/branches/${memberRecord.branch_id}`}
             className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-[#0f1729] transition hover:bg-slate-50"
           >
             Back to Members
