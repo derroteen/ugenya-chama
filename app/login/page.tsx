@@ -34,6 +34,8 @@ function LoginPageContent() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [identifierReadOnly, setIdentifierReadOnly] = useState(true);
+  const [passwordReadOnly, setPasswordReadOnly] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showSelectBranchLink, setShowSelectBranchLink] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -231,6 +233,8 @@ function LoginPageContent() {
                   type="text"
                   autoComplete="username"
                   required
+                  readOnly={identifierReadOnly}
+                  onFocus={() => setIdentifierReadOnly(false)}
                   disabled={isLoading}
                   value={identifier}
                   onChange={(event) => setIdentifier(event.target.value)}
@@ -252,6 +256,8 @@ function LoginPageContent() {
                     type={showPassword ? "text" : "password"}
                     autoComplete="current-password"
                     required
+                    readOnly={passwordReadOnly}
+                    onFocus={() => setPasswordReadOnly(false)}
                     disabled={isLoading}
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
