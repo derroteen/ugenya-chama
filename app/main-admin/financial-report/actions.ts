@@ -41,6 +41,35 @@ export type FinancialReportData = {
   };
 };
 
+export type AnnualReportRow = {
+  month: string;
+  monthLabel: string;
+  totalSubs: number;
+  totalEmergencyContributions: number;
+  totalWithdrawals: number;
+  businessIncome: number;
+  businessExpenses: number;
+  netPosition: number;
+};
+
+export type AnnualReportTotal = {
+  month: "TOTAL";
+  monthLabel: "Year Total";
+  totalSubs: number;
+  totalEmergencyContributions: number;
+  totalWithdrawals: number;
+  businessIncome: number;
+  businessExpenses: number;
+  netPosition: number;
+};
+
+export type AnnualFinancialReportData = {
+  year: number;
+  generatedAt: string;
+  rows: AnnualReportRow[];
+  yearTotal: AnnualReportTotal;
+};
+
 function toNumber(value: unknown) {
   if (typeof value === "number") return value;
   if (typeof value === "string") {
@@ -233,5 +262,71 @@ export async function generateFinancialReport(month: string): Promise<FinancialR
     businessSummaries,
     businessTotals,
     overallPosition,
+  };
+}
+
+export async function generateAnnualReport(year: number): Promise<AnnualFinancialReportData> {
+  const safeYear = Number.isFinite(year) ? Math.trunc(year) : new Date().getFullYear();
+  const { supabase } = await ensureAdminAccess();
+
+  const monthEntries = Array.from({ length: 12 }, (_, index) => {
+    const monthNumber = index + 1;
+    return {
+      month: `${safeYear}-${String(monthNumber).padStart(2, "0")}`,
+      monthLabel: formatMonthLabel(`${safeYear}-${String(monthNumber).padStart(2, "0")}`),
+    };
+  });
+
+  const rows: AnnualReportRow[] = [];
+
+  for (const monthEntry of monthEntries) {
+    const monthReport = await generateFinancialReport(monthEntry.month);
+
+    const row: AnnualReportRow = {
+      month: monthEntry.month,
+      monthLabel: monthEntry.monthLabel,
+      totalSubs: monthReport.savingsSummary.totalSubs,
+      totalEmergencyContributions: monthReport.savingsSummary.totalEmergencyContributions,
+      totalWithdrawals: monthReport.savingsSummary.totalWithdrawals,
+      businessIncome: monthReport.businessTotals.totalIncome,
+      businessExpenses: monthReport.businessTotals.totalExpenses,
+      netPosition:
+        monthReport.savingsSummary.totalSubs +
+        monthReport.savingsSummary.totalEmergencyContributions -
+        monthReport.savingsSummary.totalWithdrawals +
+        monthReport.businessTotals.totalIncome -
+        monthReport.businessTotals.totalExpenses,
+    };
+
+    rows.push(row);
+  }
+
+  const yearTotal = rows.reduce<AnnualReportTotal>(
+    (totals, row) => {
+      totals.totalSubs += row.totalSubs;
+      totals.totalEmergencyContributions += row.totalEmergencyContributions;
+      totals.totalWithdrawals += row.totalWithdrawals;
+      totals.businessIncome += row.businessIncome;
+      totals.businessExpenses += row.businessExpenses;
+      totals.netPosition += row.netPosition;
+      return totals;
+    },
+    {
+      month: "TOTAL",
+      monthLabel: "Year Total",
+      totalSubs: 0,
+      totalEmergencyContributions: 0,
+      totalWithdrawals: 0,
+      businessIncome: 0,
+      businessExpenses: 0,
+      netPosition: 0,
+    }
+  );
+
+  return {
+    year: safeYear,
+    generatedAt: new Date().toISOString(),
+    rows,
+    yearTotal,
   };
 }
