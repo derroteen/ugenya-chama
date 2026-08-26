@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import DownloadOwnBranchBlankSheetButton from "./DownloadOwnBranchBlankSheetButton";
 
@@ -107,8 +108,14 @@ export default async function MemberDashboardPage() {
           Your contribution history and welfare records will appear here.
         </p>
 
-        <div className="mt-6">
+        <div className="mt-6 flex flex-wrap items-center gap-3">
           <DownloadOwnBranchBlankSheetButton />
+          <Link
+            href="/member/passbook"
+            className="inline-flex items-center justify-center rounded-lg border border-[#1d3a8a]/20 bg-white px-5 py-2.5 text-sm font-semibold text-[#0f1729] transition hover:border-[#1d3a8a]/35 hover:bg-slate-50"
+          >
+            Passbook
+          </Link>
         </div>
 
         <section className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
