@@ -327,7 +327,10 @@ export default function ImportMembersClient({ branchOptions }: { branchOptions: 
             </div>
 
             <div className="overflow-hidden rounded-xl border border-slate-200">
-              <div className="overflow-x-auto">
+              <div
+                className="w-full overflow-x-auto"
+                style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-x" }}
+              >
                 <table className="min-w-full divide-y divide-slate-200">
                   <thead className="bg-slate-50">
                     <tr>
