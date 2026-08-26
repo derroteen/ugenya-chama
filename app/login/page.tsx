@@ -44,6 +44,7 @@ function LoginPageContent() {
   });
 
   const branchCode = searchParams.get("branch")?.trim().toUpperCase() ?? "";
+  const inactivityMessage = searchParams.get("message") ?? null;
 
   useEffect(() => {
     let isActive = true;
@@ -188,6 +189,15 @@ function LoginPageContent() {
             {branchNotRecognized ? (
               <div className="mt-5 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-base text-amber-900">
                 Branch not recognized - please go back and select your branch
+              </div>
+            ) : null}
+
+            {inactivityMessage ? (
+              <div
+                role="alert"
+                className="mt-5 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-base text-amber-900"
+              >
+                <p>{inactivityMessage}</p>
               </div>
             ) : null}
 
