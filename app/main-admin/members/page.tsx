@@ -62,6 +62,12 @@ function escapeIlike(value: string) {
   return value.replace(/[,%_]/g, " ").trim();
 }
 
+function numericMemberIdValue(memberId: string) {
+  const digits = memberId.replace(/\D/g, "");
+  if (!digits) return Number.MAX_SAFE_INTEGER;
+  return Number.parseInt(digits, 10);
+}
+
 export default async function MainAdminMembersPage({ searchParams }: PageProps) {
   const supabase = await createClient();
 
@@ -112,7 +118,9 @@ export default async function MainAdminMembersPage({ searchParams }: PageProps) 
   }
 
   const { data: members } = await membersQuery;
-  const rows = (members ?? []) as MemberRow[];
+  const rows = ((members ?? []) as MemberRow[]).sort((a, b) => {
+    return numericMemberIdValue(a.member_id) - numericMemberIdValue(b.member_id);
+  });
 
   return (
     <main className="bg-[#eef2ff] px-4 py-10 text-[#475569] sm:px-6 lg:px-8 lg:py-14">
