@@ -156,8 +156,12 @@ export default async function MainAdminBranchDetailsPage({ params }: PageProps) 
               </div>
             ) : (
               <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
-                <table className="min-w-full divide-y divide-slate-200">
-                  <thead className="bg-slate-50">
+                <div
+                  className="w-full overflow-x-auto"
+                  style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-x pan-y" }}
+                >
+                  <table className="min-w-full divide-y divide-slate-200">
+                    <thead className="bg-slate-50">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 sm:px-6">No.</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 sm:px-6">Member ID</th>
@@ -190,7 +194,8 @@ export default async function MainAdminBranchDetailsPage({ params }: PageProps) 
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                  </table>
+                </div>
               </div>
             )}
           </section>

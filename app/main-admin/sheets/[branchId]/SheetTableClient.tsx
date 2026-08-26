@@ -265,7 +265,7 @@ export default function SheetTableClient({ rows }: SheetTableClientProps) {
       <div className="mt-4 overflow-hidden rounded-xl border border-slate-200">
         <div
           className="w-full overflow-x-auto"
-          style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-x" }}
+          style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-x pan-y" }}
         >
           <table className="min-w-[1500px] divide-y divide-slate-200">
             <thead className="bg-slate-50">

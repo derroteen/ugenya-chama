@@ -229,7 +229,7 @@ export default function TransactionLog({ ventureId, month, transactions }: Trans
                 <div className="mt-2 overflow-hidden rounded-xl border border-slate-200">
                   <div
                     className="w-full overflow-x-auto"
-                    style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-x" }}
+                    style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-x pan-y" }}
                   >
                     <table className="min-w-full divide-y divide-slate-200">
                       <thead className="bg-slate-50">
