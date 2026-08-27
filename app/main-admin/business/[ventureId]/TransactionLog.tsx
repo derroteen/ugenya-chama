@@ -4,6 +4,8 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { addTransaction, type BusinessTransaction } from "./actions";
 import { TRANSACTION_TYPES, type TransactionType } from "./transaction-types";
+import { useOnlineStatus } from "@/lib/useOnlineStatus";
+import OfflineBanner from "@/app/components/OfflineBanner";
 
 type TransactionLogProps = {
   ventureId: string;
@@ -47,6 +49,7 @@ export default function TransactionLog({ ventureId, month, transactions }: Trans
   const [isSaving, startSaving] = useTransition();
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const isOffline = !useOnlineStatus();
 
   const groups = useMemo(() => {
     const map = new Map<TransactionType, BusinessTransaction[]>();
@@ -169,11 +172,13 @@ export default function TransactionLog({ ventureId, month, transactions }: Trans
           </div>
         </div>
 
+        <OfflineBanner show={isOffline} className="mt-4" />
+
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <button
             type="button"
             onClick={handleAddTransaction}
-            disabled={isSaving}
+            disabled={isSaving || isOffline}
             className="inline-flex items-center rounded-lg bg-[#1d3a8a] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#16306f] disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isSaving ? "Adding..." : "Add Transaction"}

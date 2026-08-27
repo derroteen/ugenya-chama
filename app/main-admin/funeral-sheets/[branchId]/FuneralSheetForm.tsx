@@ -2,6 +2,8 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { saveFuneralCollections, type FuneralCollectionSource, type FuneralSheetMember } from "./actions";
+import { useOnlineStatus } from "@/lib/useOnlineStatus";
+import OfflineBanner from "@/app/components/OfflineBanner";
 
 type FuneralSheetFormProps = {
   branchId: string;
@@ -33,6 +35,7 @@ export default function FuneralSheetForm({ branchId, members }: FuneralSheetForm
   const [isSaving, startSaving] = useTransition();
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const isOffline = !useOnlineStatus();
 
   const total = useMemo(
     () => Object.values(amounts).reduce((sum, value) => sum + toNumber(value), 0),
@@ -106,11 +109,13 @@ export default function FuneralSheetForm({ branchId, members }: FuneralSheetForm
         </div>
       </div>
 
+      <OfflineBanner show={isOffline} className="mt-6" />
+
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
         <button
           type="button"
           onClick={handleSaveAll}
-          disabled={isSaving || members.length === 0}
+          disabled={isSaving || members.length === 0 || isOffline}
           className="inline-flex items-center rounded-lg bg-[#1d3a8a] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#16306f] disabled:cursor-not-allowed disabled:opacity-70"
         >
           {isSaving ? "Saving..." : "Save All"}

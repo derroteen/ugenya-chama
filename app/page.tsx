@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Lora, Source_Sans_3 } from "next/font/google";
 import PublicHeader from "./components/PublicHeader";
+import InstallPWAButton from "@/components/InstallPWAButton";
 
 const displayFont = Lora({
   subsets: ["latin"],
@@ -138,13 +139,16 @@ export default function Home() {
             <p className="mt-6 max-w-3xl text-lg leading-8">
               UAE is a community savings and welfare association supporting members and households across all its branches.
             </p>
-            <a
-              href="/documents/UAE-Membership-Application-Form.pdf"
-              download="UAE-Membership-Application-Form.pdf"
-              className="mt-10 inline-flex rounded-md bg-[#1d3a8a] px-6 py-3.5 text-base font-semibold text-white transition hover:bg-[#16306f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a] focus-visible:ring-offset-2"
-            >
-              Download Membership Application Form
-            </a>
+            <div className="mt-10 flex flex-wrap items-center gap-4">
+              <a
+                href="/documents/UAE-Membership-Application-Form.pdf"
+                download="UAE-Membership-Application-Form.pdf"
+                className="inline-flex rounded-md bg-[#1d3a8a] px-6 py-3.5 text-base font-semibold text-white transition hover:bg-[#16306f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a] focus-visible:ring-offset-2"
+              >
+                Download Membership Application Form
+              </a>
+              <InstallPWAButton />
+            </div>
           </div>
         </div>
       </section>

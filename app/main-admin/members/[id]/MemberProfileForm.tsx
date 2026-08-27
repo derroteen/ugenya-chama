@@ -2,6 +2,8 @@
 
 import { useActionState } from "react";
 import { updateMemberProfile, type ProfileActionResult } from "./profile-actions";
+import { useOnlineStatus } from "@/lib/useOnlineStatus";
+import OfflineBanner from "@/app/components/OfflineBanner";
 
 type MemberProfileFormProps = {
   memberId: string;
@@ -32,6 +34,7 @@ export default function MemberProfileForm({
       updateMemberProfile(memberId, previousState, formData),
     initialState
   );
+  const isOffline = !useOnlineStatus();
 
   return (
     <form action={formAction} className="mt-6 space-y-5 rounded-xl border border-slate-200 bg-slate-50 p-5">
@@ -134,9 +137,11 @@ export default function MemberProfileForm({
         </div>
       </div>
 
+      <OfflineBanner show={isOffline} />
+
       <button
         type="submit"
-        disabled={pending}
+        disabled={pending || isOffline}
         className="inline-flex items-center rounded-lg bg-[#1d3a8a] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#16306f] disabled:cursor-not-allowed disabled:opacity-70"
       >
         {pending ? "Saving..." : "Save Profile"}

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import DownloadOwnBranchBlankSheetButton from "./DownloadOwnBranchBlankSheetButton";
+import InstallPWAButton from "@/components/InstallPWAButton";
 
 function formatKsh(value: number) {
   return `KSH ${new Intl.NumberFormat("en-KE", {
@@ -139,13 +140,18 @@ export default async function MemberDashboardPage() {
   return (
     <main className="bg-[#eef2ff] px-4 py-10 text-[#475569] sm:px-6 lg:px-8 lg:py-14">
       <section className="mx-auto w-full max-w-5xl rounded-2xl border border-slate-200 bg-white px-6 py-8 shadow-sm sm:px-8 sm:py-10 lg:px-10 lg:py-12">
-        <h1 className="text-3xl font-bold tracking-tight text-[#0f1729] [font-family:var(--font-uae-display)] sm:text-4xl">
-          Member Dashboard
-        </h1>
-        <p className="mt-4 text-lg">Welcome, {member?.full_name ?? "Member"}.</p>
-        <p className="mt-2 text-base sm:text-lg">
-          Branch: {branch?.name ?? "Your branch"}
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-[#0f1729] [font-family:var(--font-uae-display)] sm:text-4xl">
+              Member Dashboard
+            </h1>
+            <p className="mt-4 text-lg">Welcome, {member?.full_name ?? "Member"}.</p>
+            <p className="mt-2 text-base sm:text-lg">
+              Branch: {branch?.name ?? "Your branch"}
+            </p>
+          </div>
+          <InstallPWAButton />
+        </div>
         <p className="mt-1 text-sm text-slate-500">
           Member ID: {member?.member_id ?? "Not assigned"}
         </p>

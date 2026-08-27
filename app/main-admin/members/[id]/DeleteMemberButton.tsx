@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { deleteMember } from "./actions";
+import { useOnlineStatus } from "@/lib/useOnlineStatus";
+import OfflineBanner from "@/app/components/OfflineBanner";
 
 type DeleteMemberButtonProps = {
   memberId: string;
@@ -17,6 +19,7 @@ export default function DeleteMemberButton({
   const [isOpen, setIsOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const isOffline = !useOnlineStatus();
 
   async function handleDelete() {
     setIsDeleting(true);
@@ -78,6 +81,8 @@ export default function DeleteMemberButton({
               </div>
             ) : null}
 
+            <OfflineBanner show={isOffline} className="mt-4" />
+
             <div className="mt-6 flex flex-wrap justify-end gap-3">
               <button
                 type="button"
@@ -89,7 +94,7 @@ export default function DeleteMemberButton({
 
               <button
                 type="button"
-                disabled={isDeleting}
+                disabled={isDeleting || isOffline}
                 onClick={handleDelete}
                 className="inline-flex items-center justify-center rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300"
               >

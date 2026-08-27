@@ -2,6 +2,8 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useOnlineStatus } from "@/lib/useOnlineStatus";
+import OfflineBanner from "@/app/components/OfflineBanner";
 
 export default function SettingsPage() {
   const supabase = useMemo(() => createClient(), []);
@@ -17,6 +19,7 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const isOffline = !useOnlineStatus();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -99,6 +102,8 @@ export default function SettingsPage() {
             {successMessage}
           </div>
         ) : null}
+
+        <OfflineBanner show={isOffline} className="mt-6" />
 
         <form onSubmit={handleSubmit} className="mt-7 space-y-5">
           <div>
@@ -286,7 +291,7 @@ export default function SettingsPage() {
 
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || isOffline}
             className="inline-flex w-full items-center justify-center rounded-xl bg-[#1d3a8a] px-5 py-3.5 text-base font-semibold text-white transition hover:bg-[#16306f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isLoading ? (

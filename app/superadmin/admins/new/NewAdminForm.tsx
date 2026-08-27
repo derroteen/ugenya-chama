@@ -3,6 +3,8 @@
 import { useActionState, useEffect, useState } from "react";
 import { createAdminAccountAction } from "./actions";
 import type { NewAdminFormState } from "./form-state";
+import { useOnlineStatus } from "@/lib/useOnlineStatus";
+import OfflineBanner from "@/app/components/OfflineBanner";
 
 interface BranchOption {
   id: string;
@@ -16,6 +18,7 @@ interface NewAdminFormProps {
 
 export default function NewAdminForm({ branchOptions: _branchOptions, initialState }: NewAdminFormProps) {
   const [state, formAction, isPending] = useActionState(createAdminAccountAction, initialState);
+  const isOffline = !useOnlineStatus();
   const [showSuccess, setShowSuccess] = useState(false);
   const [copiedField, setCopiedField] = useState<"email" | "password" | null>(null);
   const [resetVersion, setResetVersion] = useState(0);
@@ -96,6 +99,8 @@ export default function NewAdminForm({ branchOptions: _branchOptions, initialSta
 
   return (
     <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+      <OfflineBanner show={isOffline} className="mb-6" />
+
       {state.status === "error" ? (
         <div
           role="alert"
@@ -141,7 +146,7 @@ export default function NewAdminForm({ branchOptions: _branchOptions, initialSta
 
         <button
           type="submit"
-          disabled={isPending}
+          disabled={isPending || isOffline}
           className="inline-flex items-center justify-center rounded-xl bg-[#1d3a8a] px-6 py-3 text-base font-semibold text-white transition hover:bg-[#16306f] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isPending ? "Creating..." : "Create Main Admin"}

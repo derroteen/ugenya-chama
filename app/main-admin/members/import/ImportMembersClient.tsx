@@ -2,6 +2,8 @@
 
 import { useMemo, useRef, useState } from "react";
 import { bulkImportMembers, type BulkImportMember } from "./actions";
+import { useOnlineStatus } from "@/lib/useOnlineStatus";
+import OfflineBanner from "@/app/components/OfflineBanner";
 
 type BranchOption = {
   id: string;
@@ -128,9 +130,10 @@ export default function ImportMembersClient({ branchOptions }: { branchOptions: 
   const [summary, setSummary] = useState<{ created: number; failed: number; failures: string[] } | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [fileName, setFileName] = useState("");
+  const isOffline = !useOnlineStatus();
 
   const canPreview = selectedBranchId.trim().length > 0;
-  const canConfirm = previewRows.length > 0 && !importing;
+  const canConfirm = previewRows.length > 0 && !importing && !isOffline;
 
   const previewSummary = useMemo(() => {
     if (!previewRows.length) return "No preview available yet.";
@@ -369,6 +372,8 @@ export default function ImportMembersClient({ branchOptions }: { branchOptions: 
                 </table>
               </div>
             </div>
+
+            <OfflineBanner show={isOffline} className="mt-6" />
 
             <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
               <button

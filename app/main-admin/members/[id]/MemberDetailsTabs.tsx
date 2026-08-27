@@ -7,6 +7,8 @@ import {
   upsertBeneficiaryDeclaration,
   upsertFamilyDetails,
 } from "./actions";
+import { useOnlineStatus } from "@/lib/useOnlineStatus";
+import OfflineBanner from "@/app/components/OfflineBanner";
 
 type TabKey = "family" | "beneficiary";
 
@@ -88,6 +90,7 @@ export default function MemberDetailsTabs({
   const [activeTab, setActiveTab] = useState<TabKey>("family");
   const [editingFamily, setEditingFamily] = useState(false);
   const [editingBeneficiary, setEditingBeneficiary] = useState(false);
+  const isOffline = !useOnlineStatus();
 
   const [familyState, familyAction, familyPending] = useActionState(
     async (_previousState: ActionResult, formData: FormData) =>
@@ -414,9 +417,11 @@ export default function MemberDetailsTabs({
                   </div>
                 </div>
 
+                <OfflineBanner show={isOffline} />
+
                 <button
                   type="submit"
-                  disabled={familyPending}
+                  disabled={familyPending || isOffline}
                   className="inline-flex items-center rounded-lg bg-[#1d3a8a] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#16306f] disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {familyPending ? (
@@ -455,6 +460,8 @@ export default function MemberDetailsTabs({
 
             <div className="mt-8">
               <h3 className="text-lg font-semibold text-[#0f1729]">Children</h3>
+
+              <OfflineBanner show={isOffline} className="mt-3" />
 
               {childAddState.status !== "idle" ? (
                 <p
@@ -498,7 +505,8 @@ export default function MemberDetailsTabs({
                         <input type="hidden" name="childId" value={child.id} />
                         <button
                           type="submit"
-                          className="rounded-md border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100"
+                          disabled={isOffline}
+                          className="rounded-md border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           Delete
                         </button>
@@ -535,7 +543,7 @@ export default function MemberDetailsTabs({
                 <div className="sm:col-span-3">
                   <button
                     type="submit"
-                    disabled={childAddPending}
+                    disabled={childAddPending || isOffline}
                     className="inline-flex items-center rounded-lg bg-[#1d3a8a] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#16306f] disabled:cursor-not-allowed disabled:opacity-70"
                   >
                     {childAddPending ? "Adding..." : "Add Child"}
@@ -718,9 +726,11 @@ export default function MemberDetailsTabs({
                   </div>
                 </div>
 
+                <OfflineBanner show={isOffline} />
+
                 <button
                   type="submit"
-                  disabled={beneficiaryPending}
+                  disabled={beneficiaryPending || isOffline}
                   className="inline-flex items-center rounded-lg bg-[#1d3a8a] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#16306f] disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {beneficiaryPending ? (

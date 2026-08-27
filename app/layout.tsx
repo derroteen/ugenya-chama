@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Lora, Source_Sans_3 } from "next/font/google";
 import NavBar from "@/app/components/NavBar";
+import ServiceWorkerRegister from "@/app/components/ServiceWorkerRegister";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -67,6 +68,7 @@ export const metadata: Metadata = {
     ],
     apple: "/apple-touch-icon.png",
   },
+  manifest: "/manifest.webmanifest",
   robots: {
     index: true,
     follow: true,
@@ -84,6 +86,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${uaeDisplay.variable} ${uaeSans.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <ServiceWorkerRegister />
         <NavBar />
         {children}
       </body>

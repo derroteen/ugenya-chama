@@ -4,6 +4,8 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { clearMustChangePasswordAction } from "./actions";
+import { useOnlineStatus } from "@/lib/useOnlineStatus";
+import OfflineBanner from "@/app/components/OfflineBanner";
 
 export default function ChangePasswordPage() {
   const router = useRouter();
@@ -13,6 +15,7 @@ export default function ChangePasswordPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const isOffline = !useOnlineStatus();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -72,6 +75,8 @@ export default function ChangePasswordPage() {
             {error}
           </div>
         ) : null}
+
+        <OfflineBanner show={isOffline} className="mt-4" />
 
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
           <div>
@@ -204,7 +209,7 @@ export default function ChangePasswordPage() {
 
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || isOffline}
             className="inline-flex w-full items-center justify-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isLoading ? (

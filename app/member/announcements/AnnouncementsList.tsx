@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { markAnnouncementRead, type MemberAnnouncement } from "./actions";
+import { useOnlineStatus } from "@/lib/useOnlineStatus";
 
 function formatDate(value: string) {
   const date = new Date(value);
@@ -15,6 +16,7 @@ function formatDate(value: string) {
 
 export default function AnnouncementsList({ initialAnnouncements }: { initialAnnouncements: MemberAnnouncement[] }) {
   const [announcements, setAnnouncements] = useState(initialAnnouncements);
+  const isOffline = !useOnlineStatus();
 
   async function handleOpenAnnouncement(id: string) {
     const existing = announcements.find((item) => item.id === id);
@@ -61,7 +63,8 @@ export default function AnnouncementsList({ initialAnnouncements }: { initialAnn
               <button
                 type="button"
                 onClick={() => void handleOpenAnnouncement(announcement.id)}
-                className="mt-4 inline-flex items-center justify-center rounded-lg bg-[#0f1729] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1d3a8a]"
+                disabled={isOffline}
+                className="mt-4 inline-flex items-center justify-center rounded-lg bg-[#0f1729] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1d3a8a] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Mark as Read
               </button>

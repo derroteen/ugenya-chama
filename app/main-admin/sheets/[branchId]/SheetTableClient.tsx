@@ -6,6 +6,8 @@ import {
   updateAllEntries,
   updateMonthlyEntry,
 } from "../actions";
+import { useOnlineStatus } from "@/lib/useOnlineStatus";
+import OfflineBanner from "@/app/components/OfflineBanner";
 
 type SheetTableClientProps = {
   rows: SheetRow[];
@@ -102,6 +104,7 @@ export default function SheetTableClient({ rows }: SheetTableClientProps) {
   const [savingRowId, setSavingRowId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const isOffline = !useOnlineStatus();
   const [draftRows, setDraftRows] = useState<RowDraft[]>(() =>
     rows.map((row) => ({
       ...row,
@@ -223,11 +226,13 @@ export default function SheetTableClient({ rows }: SheetTableClientProps) {
 
   return (
     <>
+      <OfflineBanner show={isOffline} className="mt-6" />
+
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
         <button
           type="button"
           onClick={handleSaveAll}
-          disabled={isSavingAll || isSavingRow || draftRows.length === 0}
+          disabled={isSavingAll || isSavingRow || draftRows.length === 0 || isOffline}
           className="inline-flex items-center rounded-lg bg-[#1d3a8a] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#16306f] disabled:cursor-not-allowed disabled:opacity-70"
         >
           {isSavingAll ? "Saving..." : "Save All"}
@@ -391,8 +396,8 @@ export default function SheetTableClient({ rows }: SheetTableClientProps) {
                         <button
                           type="button"
                           onClick={() => handleSaveRow(index)}
-                          disabled={isSavingAll || isSavingRow}
-                          className="inline-flex items-center rounded-lg bg-[#1d3a8a] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#16306f]"
+                          disabled={isSavingAll || isSavingRow || isOffline}
+                          className="inline-flex items-center rounded-lg bg-[#1d3a8a] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#16306f] disabled:cursor-not-allowed disabled:opacity-70"
                         >
                           {rowIsSaving ? "Saving..." : "Save Row"}
                         </button>

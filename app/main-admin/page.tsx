@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
+import InstallPWAButton from "@/components/InstallPWAButton";
 
 function formatKsh(value: number) {
   return `KSH ${new Intl.NumberFormat("en-KE", {
@@ -116,12 +117,17 @@ export default async function MainAdminDashboardPage() {
   return (
     <main className="bg-[#eef2ff] px-4 py-10 text-[#475569] sm:px-6 lg:px-8 lg:py-14">
       <section className="mx-auto w-full max-w-6xl rounded-2xl border border-slate-200 bg-white px-6 py-8 shadow-sm sm:px-8 sm:py-10 lg:px-10 lg:py-12">
-        <h1 className="text-3xl font-bold tracking-tight text-[#0f1729] [font-family:var(--font-uae-display)] sm:text-4xl">
-          Main Admin Dashboard
-        </h1>
-        <p className="mt-4 text-lg">
-          Welcome, {profile?.full_name ?? "Main Admin"}.
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-[#0f1729] [font-family:var(--font-uae-display)] sm:text-4xl">
+              Main Admin Dashboard
+            </h1>
+            <p className="mt-4 text-lg">
+              Welcome, {profile?.full_name ?? "Main Admin"}.
+            </p>
+          </div>
+          <InstallPWAButton />
+        </div>
 
         <section className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <article className="rounded-xl border border-[#1d3a8a]/20 bg-[#0f1729] px-5 py-5 text-white shadow-sm">
