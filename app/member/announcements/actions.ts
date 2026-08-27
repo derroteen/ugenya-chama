@@ -48,18 +48,75 @@ async function getAuthenticatedMemberContext() {
   return { supabase, member };
 }
 
+type RawAnnouncementRow = {
+  id: string;
+  title: string;
+  body: string;
+  created_at: string;
+  target_type: string;
+};
+
+// PostgREST's .or() can't filter on a related table's column (announcement_branches.branch_id)
+// from a top-level query on `announcements` - that syntax silently produces an invalid query.
+// Instead we fetch the two visible sets separately (broadcast announcements, and branch-targeted
+// announcements linked to this member's branch) and merge them here.
+async function getVisibleAnnouncementRows(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  branchId: string
+): Promise<RawAnnouncementRow[]> {
+  const { data: broadcastAnnouncements, error: broadcastError } = await supabase
+    .from("announcements")
+    .select("id, title, body, created_at, target_type")
+    .eq("target_type", "all");
+
+  if (broadcastError) {
+    throw broadcastError;
+  }
+
+  const { data: branchLinks, error: branchLinksError } = await supabase
+    .from("announcement_branches")
+    .select("announcement_id")
+    .eq("branch_id", branchId);
+
+  if (branchLinksError) {
+    throw branchLinksError;
+  }
+
+  const branchAnnouncementIds = [
+    ...new Set((branchLinks ?? []).map((row) => row.announcement_id as string)),
+  ];
+
+  let branchAnnouncements: RawAnnouncementRow[] = [];
+
+  if (branchAnnouncementIds.length > 0) {
+    const { data, error: branchAnnouncementsError } = await supabase
+      .from("announcements")
+      .select("id, title, body, created_at, target_type")
+      .in("id", branchAnnouncementIds);
+
+    if (branchAnnouncementsError) {
+      throw branchAnnouncementsError;
+    }
+
+    branchAnnouncements = data ?? [];
+  }
+
+  // De-dupe by id (an announcement shouldn't match both sets since target_type is
+  // exclusive, but this keeps the merge correct either way) and sort newest first.
+  const byId = new Map<string, RawAnnouncementRow>();
+  for (const row of [...(broadcastAnnouncements ?? []), ...branchAnnouncements]) {
+    byId.set(row.id, row);
+  }
+
+  return [...byId.values()].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+}
+
 export async function getVisibleAnnouncementsForMember(): Promise<MemberAnnouncement[]> {
   const { supabase, member } = await getAuthenticatedMemberContext();
 
-  const { data: announcements, error } = await supabase
-    .from("announcements")
-    .select("id, title, body, created_at, target_type")
-    .or(`target_type.eq.all,announcement_branches.branch_id.eq.${member.branch_id}`)
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    throw error;
-  }
+  const announcements = await getVisibleAnnouncementRows(supabase, member.branch_id);
 
   const { data: readRows, error: readRowsError } = await supabase
     .from("announcement_reads")
@@ -72,7 +129,7 @@ export async function getVisibleAnnouncementsForMember(): Promise<MemberAnnounce
 
   const readIds = new Set((readRows ?? []).map((row) => row.announcement_id));
 
-  return (announcements ?? []).map((announcement) => ({
+  return announcements.map((announcement) => ({
     id: announcement.id,
     title: announcement.title,
     body: announcement.body,
@@ -84,16 +141,9 @@ export async function getVisibleAnnouncementsForMember(): Promise<MemberAnnounce
 export async function getUnreadAnnouncementCountForMember(): Promise<number> {
   const { supabase, member } = await getAuthenticatedMemberContext();
 
-  const { data: visibleAnnouncements, error: visibleError } = await supabase
-    .from("announcements")
-    .select("id, target_type")
-    .or(`target_type.eq.all,announcement_branches.branch_id.eq.${member.branch_id}`);
+  const visibleAnnouncements = await getVisibleAnnouncementRows(supabase, member.branch_id);
 
-  if (visibleError) {
-    throw visibleError;
-  }
-
-  if (!visibleAnnouncements || visibleAnnouncements.length === 0) {
+  if (visibleAnnouncements.length === 0) {
     return 0;
   }
 
