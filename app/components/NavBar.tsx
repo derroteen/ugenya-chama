@@ -29,6 +29,7 @@ const roleLinks: Record<Role, NavLinkConfig[]> = {
     { label: "Dashboard", href: "/main-admin", icon: "dashboard" },
     { label: "Branches", href: "/main-admin/branches", icon: "branches" },
     { label: "All Members", href: "/main-admin/members", icon: "members" },
+    { label: "Announcements", href: "/main-admin/announcements", icon: "dashboard" },
     { label: "Business Activities", href: "/main-admin/business", icon: "branches" },
     { label: "Financial Report", href: "/main-admin/financial-report", icon: "dashboard" },
     { label: "Funeral Collections", href: "/main-admin/funeral-sheets", icon: "branches" },
@@ -36,6 +37,7 @@ const roleLinks: Record<Role, NavLinkConfig[]> = {
   ],
   member: [
     { label: "Dashboard", href: "/member", icon: "dashboard" },
+    { label: "Announcements", href: "/member/announcements", icon: "dashboard" },
     { label: "Settings", href: "/settings", icon: "settings" },
   ],
 };
@@ -166,6 +168,7 @@ export default function NavBar() {
   const [hasSession, setHasSession] = useState(false);
   const [role, setRole] = useState<Role | null>(null);
   const [displayName, setDisplayName] = useState("");
+  const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -211,7 +214,7 @@ export default function NavBar() {
         if (resolvedRole === "member") {
           const { data: member, error: memberError } = await supabase
             .from("members")
-            .select("member_id")
+            .select("id, member_id, branch_id")
             .eq("auth_id", userId)
             .maybeSingle();
 
@@ -222,8 +225,49 @@ export default function NavBar() {
           }
 
           setDisplayName(member?.member_id ?? profile?.full_name ?? fallbackName);
+
+          const branchId = member?.branch_id;
+          const { data: announcementRows, error: announcementsError } = await supabase
+            .from("announcements")
+            .select("id, target_type, announcement_branches(branch_id)");
+
+          if (!isActive) return;
+
+          if (!announcementsError && announcementRows) {
+            const visibleAnnouncements = announcementRows.filter((announcement) => {
+              if (announcement.target_type === "all") return true;
+              const branchLinks = Array.isArray(announcement.announcement_branches)
+                ? announcement.announcement_branches
+                : announcement.announcement_branches
+                  ? [announcement.announcement_branches]
+                  : [];
+              return branchLinks.some((branch) => branch?.branch_id === branchId);
+            });
+
+            const announcementIds = visibleAnnouncements.map((announcement) => announcement.id);
+
+            if (announcementIds.length > 0) {
+              const { data: readRows, error: readError } = await supabase
+                .from("announcement_reads")
+                .select("announcement_id")
+                .eq("member_id", member?.id ?? "")
+                .in("announcement_id", announcementIds);
+
+              if (!isActive) return;
+
+              if (!readError) {
+                const readIds = new Set((readRows ?? []).map((row) => row.announcement_id));
+                setUnreadAnnouncements(
+                  visibleAnnouncements.filter((announcement) => !readIds.has(announcement.id)).length
+                );
+              }
+            } else {
+              setUnreadAnnouncements(0);
+            }
+          }
         } else {
           setDisplayName(profile?.full_name ?? fallbackName);
+          setUnreadAnnouncements(0);
         }
       } catch (error) {
         if (!isActive) return;
@@ -294,6 +338,7 @@ export default function NavBar() {
   const links = role ? roleLinks[role] : [];
   const avatarText = getAvatarText(displayName);
   const portalSubtitle = role ? roleSubtitles[role] : "USER PORTAL";
+  const memberLinks = role === "member" ? links : [];
 
   return (
     <>
@@ -380,20 +425,29 @@ export default function NavBar() {
 
         <nav className="flex-1 overflow-y-auto px-4 py-5">
           <ul className="space-y-2">
-            {links.map((link) => (
-              <li key={link.href}>
-                <Link
-                  href={link.href}
-                  onClick={() => setMenuOpen(false)}
-                  className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-100 transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-                >
-                  <span className="text-[#c9a227]">
-                    <NavIcon icon={link.icon} />
-                  </span>
-                  <span>{link.label}</span>
-                </Link>
-              </li>
-            ))}
+            {links.map((link) => {
+              const hasBadge = role === "member" && link.href === "/member/announcements" && unreadAnnouncements > 0;
+
+              return (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    onClick={() => setMenuOpen(false)}
+                    className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-100 transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                  >
+                    <span className="text-[#c9a227]">
+                      <NavIcon icon={link.icon} />
+                    </span>
+                    <span>{link.label}</span>
+                    {hasBadge ? (
+                      <span className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-[#c9a227] px-1.5 py-0.5 text-[10px] font-bold text-[#0f1729]">
+                        {unreadAnnouncements}
+                      </span>
+                    ) : null}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </nav>
 

@@ -46,6 +46,51 @@ export default async function MemberDashboardPage() {
 
   const branchId = member?.branch_id;
 
+  const unreadAnnouncementsCount = member
+    ? await (async () => {
+        const { data: visibleAnnouncements, error: visibleError } = await supabase
+          .from("announcements")
+          .select("id, target_type, announcement_branches(branch_id)");
+
+        if (visibleError || !visibleAnnouncements || visibleAnnouncements.length === 0) {
+          return 0;
+        }
+
+        const allowedAnnouncementIds = new Set<string>();
+        for (const announcement of visibleAnnouncements) {
+          const targetType = announcement.target_type;
+          const branchLinks = Array.isArray(announcement.announcement_branches)
+            ? announcement.announcement_branches
+            : announcement.announcement_branches
+              ? [announcement.announcement_branches]
+              : [];
+
+          const isVisible = targetType === "all" || branchLinks.some((branch) => branch?.branch_id === branchId);
+          if (isVisible) {
+            allowedAnnouncementIds.add(announcement.id);
+          }
+        }
+
+        if (allowedAnnouncementIds.size === 0) {
+          return 0;
+        }
+
+        const { data: readRows, error: readError } = await supabase
+          .from("announcement_reads")
+          .select("announcement_id")
+          .eq("member_id", member.id)
+          .in("announcement_id", Array.from(allowedAnnouncementIds));
+
+        if (readError) {
+          console.error("Member dashboard announcement unread count error:", readError);
+          return 0;
+        }
+
+        const readIds = new Set((readRows ?? []).map((row) => row.announcement_id));
+        return Array.from(allowedAnnouncementIds).filter((id) => !readIds.has(id)).length;
+      })()
+    : 0;
+
   const { data: branch } = branchId
     ? await supabase.from("branches").select("name").eq("id", branchId).single()
     : { data: null };
@@ -115,6 +160,17 @@ export default async function MemberDashboardPage() {
             className="inline-flex items-center justify-center rounded-lg border border-[#1d3a8a]/20 bg-white px-5 py-2.5 text-sm font-semibold text-[#0f1729] transition hover:border-[#1d3a8a]/35 hover:bg-slate-50"
           >
             Passbook
+          </Link>
+          <Link
+            href="/member/announcements"
+            className="relative inline-flex items-center justify-center rounded-lg border border-[#1d3a8a]/20 bg-white px-5 py-2.5 text-sm font-semibold text-[#0f1729] transition hover:border-[#1d3a8a]/35 hover:bg-slate-50"
+          >
+            Announcements
+            {unreadAnnouncementsCount > 0 ? (
+              <span className="ml-2 inline-flex min-w-5 items-center justify-center rounded-full bg-[#c9a227] px-1.5 py-0.5 text-[10px] font-bold text-[#0f1729]">
+                {unreadAnnouncementsCount}
+              </span>
+            ) : null}
           </Link>
         </div>
 
