@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { ensureMonthRowsForBranch, isMonthUpToDate } from "@/lib/monthlySheetSync";
 
 export type MonthlyReportTotals = {
   subs: number;
@@ -100,7 +101,7 @@ async function ensureAdminAccess() {
     throw new Error("You do not have permission to manage sheets.");
   }
 
-  return { supabase };
+  return { supabase, userId: user.id };
 }
 
 function getMemberRelation(relation: MemberRelation | MemberRelation[] | null | undefined) {
@@ -128,10 +129,24 @@ function applyTotals(totals: MonthlyReportTotals, row: MonthlyReportRow) {
 
 export async function generateMonthlyReport(month: string): Promise<MonthlyReportData> {
   const normalizedMonth = normalizeMonth(month);
-  const { supabase } = await ensureAdminAccess();
+  const { supabase, userId } = await ensureAdminAccess();
 
-  const [branchesResult, monthlyResult, emergencyResult] = await Promise.all([
-    supabase.from("branches").select("id, name").order("name", { ascending: true }),
+  const branchesResult = await supabase.from("branches").select("id, name").order("name", { ascending: true });
+  if (branchesResult.error) throw branchesResult.error;
+
+  const branches = branchesResult.data ?? [];
+
+  // Backfill this month's row for every active member in every branch first - the same
+  // thing that happens when an admin opens a branch's sheet manually - so the report
+  // reflects the full membership even for branches nobody has opened yet this month.
+  // Skipped for a future month so we never pre-create rows before that month arrives.
+  if (isMonthUpToDate(normalizedMonth)) {
+    await Promise.all(
+      branches.map((branch) => ensureMonthRowsForBranch(supabase, branch.id, normalizedMonth, userId))
+    );
+  }
+
+  const [monthlyResult, emergencyResult] = await Promise.all([
     supabase
       .from("monthly_savings")
       .select(
@@ -146,7 +161,6 @@ export async function generateMonthlyReport(month: string): Promise<MonthlyRepor
       .eq("month", normalizedMonth),
   ]);
 
-  if (branchesResult.error) throw branchesResult.error;
   if (monthlyResult.error) throw monthlyResult.error;
   if (emergencyResult.error) throw emergencyResult.error;
 
@@ -198,7 +212,7 @@ export async function generateMonthlyReport(month: string): Promise<MonthlyRepor
   }
 
   const grandTotals = createEmptyTotals();
-  const branches: MonthlyReportBranch[] = (branchesResult.data ?? []).map((branch) => {
+  const reportBranches: MonthlyReportBranch[] = branches.map((branch) => {
     const branchRows = Array.from(rowsByBranch.get(branch.id)?.values() ?? []).sort((left, right) =>
       left.memberName.localeCompare(right.memberName, undefined, { sensitivity: "base" })
     );
@@ -222,7 +236,7 @@ export async function generateMonthlyReport(month: string): Promise<MonthlyRepor
     month: normalizedMonth,
     monthLabel: formatMonthLabel(normalizedMonth),
     generatedAt: new Date().toISOString(),
-    branches,
+    branches: reportBranches,
     grandTotals,
   };
 }

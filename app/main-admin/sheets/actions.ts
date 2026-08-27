@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { ensureMonthRowsForBranch } from "@/lib/monthlySheetSync";
 
 function revalidateSheetPath(branchId: string) {
   revalidatePath(`/main-admin/sheets/${branchId}`);
@@ -111,122 +112,7 @@ export async function openMonthForBranch(branchId: string, month: string): Promi
   const normalizedMonth = normalizeMonth(month);
   const { supabase, userId } = await ensureAdminAccess();
 
-  const { data: existingMonthly, error: existingMonthlyError } = await supabase
-    .from("monthly_savings")
-    .select("id, member_id, month, previous_balance_bf, old_savings_bf, subs, cumulative_saving")
-    .eq("branch_id", branchId)
-    .eq("month", normalizedMonth)
-    .order("member_id", { ascending: true });
-
-  if (existingMonthlyError) {
-    throw existingMonthlyError;
-  }
-
-  const { data: activeMembers, error: membersError } = await supabase
-    .from("members")
-    .select("id, member_id, full_name, kbg_shares_bf, sheet_order")
-    .eq("branch_id", branchId)
-    .eq("status", "active")
-    .order("full_name", { ascending: true });
-
-  if (membersError) {
-    throw membersError;
-  }
-
-  const members = activeMembers ?? [];
-  const existingMemberIds = new Set((existingMonthly ?? []).map((row) => row.member_id));
-  const missingMembers = members.filter((member) => !existingMemberIds.has(member.id));
-  const missingMemberIds = missingMembers.map((member) => member.id);
-
-  if (missingMembers.length > 0) {
-    const [latestMonthlyResult, latestEmergencyResult] = await Promise.all([
-      supabase
-        .from("monthly_savings")
-        .select("member_id, previous_balance_bf, subs, old_savings_bf, month")
-        .in("member_id", missingMemberIds)
-        .order("month", { ascending: false }),
-      supabase
-        .from("emergency_contributions")
-        .select("member_id, emergency_balance, month")
-        .in("member_id", missingMemberIds)
-        .order("month", { ascending: false }),
-    ]);
-
-    if (latestMonthlyResult.error) throw latestMonthlyResult.error;
-    if (latestEmergencyResult.error) throw latestEmergencyResult.error;
-
-    const latestMonthlyByMember = new Map<
-      string,
-      { previousBalanceBf: number; subs: number; oldSavingsBf: number }
-    >();
-    for (const row of latestMonthlyResult.data ?? []) {
-      if (row.month >= normalizedMonth) {
-        continue;
-      }
-
-      if (!latestMonthlyByMember.has(row.member_id)) {
-        latestMonthlyByMember.set(row.member_id, {
-          previousBalanceBf: toNumber(row.previous_balance_bf),
-          subs: toNumber(row.subs),
-          oldSavingsBf: toNumber(row.old_savings_bf),
-        });
-      }
-    }
-
-    const latestEmergencyByMember = new Map<string, number>();
-    for (const row of latestEmergencyResult.data ?? []) {
-      if (!latestEmergencyByMember.has(row.member_id)) {
-        latestEmergencyByMember.set(row.member_id, toNumber(row.emergency_balance));
-      }
-    }
-
-    const monthlyPayload = missingMembers.map((member) => {
-      const latestMonthly = latestMonthlyByMember.get(member.id);
-      const previousBalance = latestMonthly
-        ? latestMonthly.previousBalanceBf + latestMonthly.subs
-        : 0;
-      const oldSavingsBf = latestMonthly?.oldSavingsBf ?? 0;
-      return {
-        branch_id: branchId,
-        member_id: member.id,
-        month: normalizedMonth,
-        old_savings_bf: oldSavingsBf,
-        previous_balance_bf: previousBalance,
-        subs: 0,
-        cumulative_saving: previousBalance,
-        created_by: userId,
-      };
-    });
-
-    const emergencyPayload = missingMembers.map((member) => {
-      const previousEmergencyBalance = latestEmergencyByMember.get(member.id) ?? 0;
-      return {
-        branch_id: branchId,
-        member_id: member.id,
-        month: normalizedMonth,
-        previous_emerg_bf: previousEmergencyBalance,
-        emerg_subs: 0,
-        cumulative_emerg_fund: previousEmergencyBalance,
-        withdrawal: 0,
-        emergency_balance: previousEmergencyBalance,
-        created_by: userId,
-      };
-    });
-
-    if (monthlyPayload.length > 0) {
-      const { error: monthlyInsertError } = await supabase
-        .from("monthly_savings")
-        .upsert(monthlyPayload, { onConflict: "branch_id,member_id,month", ignoreDuplicates: true });
-      if (monthlyInsertError) throw monthlyInsertError;
-    }
-
-    if (emergencyPayload.length > 0) {
-      const { error: emergencyInsertError } = await supabase
-        .from("emergency_contributions")
-        .upsert(emergencyPayload, { onConflict: "branch_id,member_id,month", ignoreDuplicates: true });
-      if (emergencyInsertError) throw emergencyInsertError;
-    }
-  }
+  await ensureMonthRowsForBranch(supabase, branchId, normalizedMonth, userId);
 
   const [{ data: monthlyRows, error: monthlyRowsError }, { data: emergencyRows, error: emergencyRowsError }] =
     await Promise.all([

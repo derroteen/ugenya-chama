@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { ensureMonthRowsForBranch, isMonthUpToDate } from "@/lib/monthlySheetSync";
 
 export type VentureFinancialSummary = {
   ventureId: string;
@@ -121,12 +122,24 @@ async function ensureAdminAccess() {
     throw new Error("You do not have permission to generate financial reports.");
   }
 
-  return { supabase };
+  return { supabase, userId: user.id };
 }
 
 export async function generateFinancialReport(month: string): Promise<FinancialReportData> {
   const normalizedMonth = normalizeMonth(month);
-  const { supabase } = await ensureAdminAccess();
+  const { supabase, userId } = await ensureAdminAccess();
+
+  // Backfill this month's row for every active member in every branch first, same as the
+  // monthly PDF report - otherwise totalSubs/totalEmergencyContributions silently exclude
+  // any branch whose sheet nobody has opened for this month yet. Skipped for a future month.
+  if (isMonthUpToDate(normalizedMonth)) {
+    const { data: branchList, error: branchesError } = await supabase.from("branches").select("id");
+    if (branchesError) throw branchesError;
+
+    await Promise.all(
+      (branchList ?? []).map((branch) => ensureMonthRowsForBranch(supabase, branch.id, normalizedMonth, userId))
+    );
+  }
 
   const startDate = `${normalizedMonth}-01`;
   const [year, monthNumber] = normalizedMonth.split("-").map(Number);
