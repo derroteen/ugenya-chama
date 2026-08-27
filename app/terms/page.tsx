@@ -1,6 +1,13 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Lora, Source_Sans_3 } from "next/font/google";
 import PublicHeader from "../components/PublicHeader";
+
+export const metadata: Metadata = {
+  title: "Terms & Privacy Policy",
+  description:
+    "Terms of use and privacy policy for the Ugenya Association Eldoret (UAE) member portal, covering account responsibilities, data access, and how member information is collected and used.",
+};
 
 const displayFont = Lora({
   subsets: ["latin"],

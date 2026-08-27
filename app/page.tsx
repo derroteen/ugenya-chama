@@ -61,11 +61,29 @@ const galleryImages = [
   },
 ];
 
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "NGO",
+  name: "Ugenya Association Eldoret",
+  url: "https://ugenyassociationeldoret.com",
+  email: "ugenyaassociationeldoret@gmail.com",
+  address: {
+    "@type": "PostalAddress",
+    postOfficeBoxNumber: "195-30100",
+    addressLocality: "Eldoret",
+    addressCountry: "KE",
+  },
+};
+
 export default function Home() {
   const year = new Date().getFullYear();
 
   return (
     <main className={`${bodyFont.className} min-h-screen bg-white text-[#475569]`}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+      />
       <PublicHeader brandClassName={displayFont.className} />
 
       <section className="relative isolate overflow-hidden bg-white">
