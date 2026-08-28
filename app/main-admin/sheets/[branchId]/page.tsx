@@ -84,9 +84,6 @@ export default async function MainAdminBranchSheetPage({ params, searchParams }:
         <SheetTableClient
           key={`${branchId}-${month}-${shouldOpenSheet ? "open" : "closed"}`}
           rows={rows}
-          branchId={branchId}
-          branchName={selectedBranch.name}
-          month={month}
           isSheetOpen={shouldOpenSheet}
         />
       </section>
