@@ -48,7 +48,7 @@ export default function SheetFilters({ branches, currentBranchId, month, isSheet
       const timeout = window.setTimeout(() => setSelectionNotice(""), 4000);
       return () => window.clearTimeout(timeout);
     }
-  }, [currentBranchId, month]);
+  }, [currentBranchId, month, isSheetOpen]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
