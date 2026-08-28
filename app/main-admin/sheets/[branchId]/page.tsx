@@ -87,6 +87,7 @@ export default async function MainAdminBranchSheetPage({ params, searchParams }:
           branchId={branchId}
           branchName={selectedBranch.name}
           month={month}
+          isSheetOpen={shouldOpenSheet}
         />
       </section>
     </main>

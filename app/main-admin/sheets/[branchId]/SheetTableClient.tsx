@@ -15,6 +15,7 @@ type SheetTableClientProps = {
   branchId: string;
   branchName: string;
   month: string;
+  isSheetOpen: boolean;
 };
 
 type RowDraft = SheetRow & {
@@ -101,7 +102,7 @@ function toSuccessMessage(message: string) {
     : `${trimmed} successfully.`;
 }
 
-export default function SheetTableClient({ rows, branchId, branchName, month }: SheetTableClientProps) {
+export default function SheetTableClient({ rows, branchId, branchName, month, isSheetOpen }: SheetTableClientProps) {
   const [isSavingAll, startSaveAll] = useTransition();
   const [isSavingRow, startSaveRow] = useTransition();
   const [isResyncing, startResync] = useTransition();
@@ -344,7 +345,9 @@ export default function SheetTableClient({ rows, branchId, branchName, month }: 
               {draftRows.length === 0 ? (
                 <tr>
                   <td colSpan={13} className="px-4 py-8 text-center text-sm text-slate-500">
-                    No active members in this branch.
+                    {isSheetOpen
+                      ? "No active members in this branch."
+                      : "Tap Open Sheet to load this month's contribution sheet."}
                   </td>
                 </tr>
               ) : (
