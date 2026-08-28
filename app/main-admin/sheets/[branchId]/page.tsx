@@ -23,6 +23,7 @@ export default async function MainAdminBranchSheetPage({ params, searchParams }:
   const { branchId } = await Promise.resolve(params);
   const resolvedParams = await Promise.resolve(searchParams ?? {});
   const month = getParamValue(resolvedParams.month).trim() || currentMonth();
+  const shouldOpenSheet = getParamValue(resolvedParams.open) === "1";
 
   const supabase = await createClient();
 
@@ -63,7 +64,7 @@ export default async function MainAdminBranchSheetPage({ params, searchParams }:
     );
   }
 
-  const rows = await openMonthForBranch(branchId, month);
+  const rows = shouldOpenSheet ? await openMonthForBranch(branchId, month) : [];
 
   return (
     <main className="bg-[#eef2ff] px-4 py-10 text-[#475569] sm:px-6 lg:px-8 lg:py-14">
@@ -77,10 +78,16 @@ export default async function MainAdminBranchSheetPage({ params, searchParams }:
           branches={branchOptions}
           currentBranchId={branchId}
           month={month}
-          isSheetOpen={rows.length > 0}
+          isSheetOpen={shouldOpenSheet}
         />
 
-        <SheetTableClient key={`${branchId}-${month}`} rows={rows} />
+        <SheetTableClient
+          key={`${branchId}-${month}`}
+          rows={rows}
+          branchId={branchId}
+          branchName={selectedBranch.name}
+          month={month}
+        />
       </section>
     </main>
   );

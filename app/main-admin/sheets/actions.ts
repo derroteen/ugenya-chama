@@ -45,6 +45,18 @@ export type UpdateEntryResult = {
   message: string;
 };
 
+export type ResyncCarryForwardResult = UpdateEntryResult & {
+  rows?: Array<{
+    memberId: string;
+    oldSavingsBf: number;
+    previousBalanceBf: number;
+    cumulativeSaving: number;
+    previousEmergBf: number;
+    cumulativeEmergFund: number;
+    emergencyBalance: number;
+  }>;
+};
+
 export type UpdateAllEntriesInput = {
   monthlySavingsId: string;
   emergencyContributionId: string;
@@ -322,6 +334,132 @@ export async function updateMonthlyEntryFromForm(formData: FormData): Promise<vo
 
   if (result.status === "error") {
     throw new Error(result.message);
+  }
+}
+
+export async function resyncCarryForwardValues(
+  branchId: string,
+  month: string
+): Promise<ResyncCarryForwardResult> {
+  try {
+    const requestHeaders = await headers();
+    const ip = getClientIpFromHeaders(requestHeaders);
+    const rateLimit = checkRateLimit(ip, "resync_carry_forward", 10);
+    if (!rateLimit.allowed) {
+      return { status: "error", message: "Too many resync attempts. Please try again in 15 minutes." };
+    }
+
+    const normalizedMonth = normalizeMonth(month);
+    const { supabase } = await ensureAdminAccess();
+    const [{ data: monthlyRows, error: monthlyRowsError }, { data: emergencyRows, error: emergencyRowsError }] =
+      await Promise.all([
+        supabase
+          .from("monthly_savings")
+          .select("id, member_id, subs")
+          .eq("branch_id", branchId)
+          .eq("month", normalizedMonth),
+        supabase
+          .from("emergency_contributions")
+          .select("id, member_id, emerg_subs, withdrawal")
+          .eq("branch_id", branchId)
+          .eq("month", normalizedMonth),
+      ]);
+
+    if (monthlyRowsError) throw monthlyRowsError;
+    if (emergencyRowsError) throw emergencyRowsError;
+
+    const currentMonthlyRows = monthlyRows ?? [];
+    const currentEmergencyByMember = new Map((emergencyRows ?? []).map((row) => [row.member_id, row]));
+    const memberIds = currentMonthlyRows.map((row) => row.member_id);
+    if (memberIds.length === 0) {
+      return { status: "success", message: "0 rows resynced.", rows: [] };
+    }
+
+    const [priorMonthlyResult, priorEmergencyResult] = await Promise.all([
+      supabase
+        .from("monthly_savings")
+        .select("member_id, previous_balance_bf, subs, old_savings_bf, month")
+        .eq("branch_id", branchId)
+        .in("member_id", memberIds)
+        .lt("month", normalizedMonth)
+        .order("month", { ascending: false }),
+      supabase
+        .from("emergency_contributions")
+        .select("member_id, emergency_balance, month")
+        .eq("branch_id", branchId)
+        .in("member_id", memberIds)
+        .lt("month", normalizedMonth)
+        .order("month", { ascending: false }),
+    ]);
+
+    if (priorMonthlyResult.error) throw priorMonthlyResult.error;
+    if (priorEmergencyResult.error) throw priorEmergencyResult.error;
+
+    const priorMonthlyByMember = new Map<string, { oldSavingsBf: number; previousBalanceBf: number; subs: number }>();
+    for (const row of priorMonthlyResult.data ?? []) {
+      if (!priorMonthlyByMember.has(row.member_id)) {
+        priorMonthlyByMember.set(row.member_id, {
+          oldSavingsBf: toNumber(row.old_savings_bf),
+          previousBalanceBf: toNumber(row.previous_balance_bf),
+          subs: toNumber(row.subs),
+        });
+      }
+    }
+
+    const priorEmergencyByMember = new Map<string, number>();
+    for (const row of priorEmergencyResult.data ?? []) {
+      if (!priorEmergencyByMember.has(row.member_id)) {
+        priorEmergencyByMember.set(row.member_id, toNumber(row.emergency_balance));
+      }
+    }
+
+    const refreshedRows: NonNullable<ResyncCarryForwardResult["rows"]> = [];
+
+    for (const monthlyRow of currentMonthlyRows) {
+      const priorMonthly = priorMonthlyByMember.get(monthlyRow.member_id);
+      const oldSavingsBf = priorMonthly?.oldSavingsBf ?? 0;
+      const previousBalanceBf = priorMonthly ? priorMonthly.previousBalanceBf + priorMonthly.subs : 0;
+      const currentEmergency = currentEmergencyByMember.get(monthlyRow.member_id);
+      const previousEmergBf = priorEmergencyByMember.get(monthlyRow.member_id) ?? 0;
+      const subs = toNumber(monthlyRow.subs);
+      const emergSubs = toNumber(currentEmergency?.emerg_subs);
+      const withdrawal = toNumber(currentEmergency?.withdrawal);
+      const cumulativeSaving = oldSavingsBf + previousBalanceBf + subs;
+      const cumulativeEmergFund = previousEmergBf + emergSubs;
+      const emergencyBalance = cumulativeEmergFund - withdrawal;
+
+      const { error: monthlyUpdateError } = await supabase
+        .from("monthly_savings")
+        .update({ old_savings_bf: oldSavingsBf, previous_balance_bf: previousBalanceBf, cumulative_saving: cumulativeSaving })
+        .eq("id", monthlyRow.id);
+      if (monthlyUpdateError) throw monthlyUpdateError;
+
+      if (currentEmergency) {
+        const { error: emergencyUpdateError } = await supabase
+          .from("emergency_contributions")
+          .update({ previous_emerg_bf: previousEmergBf, cumulative_emerg_fund: cumulativeEmergFund, emergency_balance: emergencyBalance })
+          .eq("id", currentEmergency.id);
+        if (emergencyUpdateError) throw emergencyUpdateError;
+      }
+
+      refreshedRows.push({
+        memberId: monthlyRow.member_id,
+        oldSavingsBf,
+        previousBalanceBf,
+        cumulativeSaving,
+        previousEmergBf,
+        cumulativeEmergFund,
+        emergencyBalance,
+      });
+    }
+
+    revalidateSheetPath(branchId);
+    return { status: "success", message: `${refreshedRows.length} rows resynced.`, rows: refreshedRows };
+  } catch (error) {
+    return {
+      status: "error",
+      message: error instanceof Error && error.message ? error.message : "Unable to resync carry-forward values.",
+    };
   }
 }
 

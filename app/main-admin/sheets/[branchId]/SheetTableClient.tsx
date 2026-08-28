@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import {
   type SheetRow,
+  resyncCarryForwardValues,
   updateAllEntries,
   updateMonthlyEntry,
 } from "../actions";
@@ -11,6 +12,9 @@ import OfflineBanner from "@/app/components/OfflineBanner";
 
 type SheetTableClientProps = {
   rows: SheetRow[];
+  branchId: string;
+  branchName: string;
+  month: string;
 };
 
 type RowDraft = SheetRow & {
@@ -38,9 +42,8 @@ function toNumber(value: number | string) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function calculateCumulativeSaving(row: Pick<RowDraft, "kbgSharesBfInput" | "oldSavingsBfInput" | "previousBalanceBfInput" | "subsInput">) {
+function calculateCumulativeSaving(row: Pick<RowDraft, "oldSavingsBfInput" | "previousBalanceBfInput" | "subsInput">) {
   return (
-    toNumber(row.kbgSharesBfInput) +
     toNumber(row.oldSavingsBfInput) +
     toNumber(row.previousBalanceBfInput) +
     toNumber(row.subsInput)
@@ -98,9 +101,10 @@ function toSuccessMessage(message: string) {
     : `${trimmed} successfully.`;
 }
 
-export default function SheetTableClient({ rows }: SheetTableClientProps) {
+export default function SheetTableClient({ rows, branchId, branchName, month }: SheetTableClientProps) {
   const [isSavingAll, startSaveAll] = useTransition();
   const [isSavingRow, startSaveRow] = useTransition();
+  const [isResyncing, startResync] = useTransition();
   const [savingRowId, setSavingRowId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -224,19 +228,64 @@ export default function SheetTableClient({ rows }: SheetTableClientProps) {
     });
   };
 
+  const handleResync = () => {
+    const monthLabel = new Intl.DateTimeFormat("en-KE", { month: "long", year: "numeric" }).format(
+      new Date(`${month}-01T00:00:00`)
+    );
+    const confirmed = window.confirm(
+      `This will refresh Old Savings B/F and Previous Balance B/F for every member in ${branchName} - ${monthLabel} using the latest saved figures from the previous month. Your entered Subs and Withdrawal amounts will not be changed. Continue?`
+    );
+    if (!confirmed) return;
+
+    setErrorMessage("");
+    setSuccessMessage("");
+    startResync(async () => {
+      const result = await resyncCarryForwardValues(branchId, month);
+      if (result.status === "error") {
+        setErrorMessage(result.message);
+        return;
+      }
+
+      const refreshedByMember = new Map((result.rows ?? []).map((row) => [row.memberId, row]));
+      setDraftRows((current) =>
+        current.map((row) => {
+          const refreshed = refreshedByMember.get(row.memberId);
+          if (!refreshed) return row;
+          return syncComputedValues({
+            ...row,
+            oldSavingsBfInput: String(refreshed.oldSavingsBf),
+            previousBalanceBfInput: String(refreshed.previousBalanceBf),
+            previousEmergBfInput: String(refreshed.previousEmergBf),
+          });
+        })
+      );
+      setSuccessMessage(toSuccessMessage(result.message));
+    });
+  };
+
   return (
     <>
       <OfflineBanner show={isOffline} className="mt-6" />
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-        <button
-          type="button"
-          onClick={handleSaveAll}
-          disabled={isSavingAll || isSavingRow || draftRows.length === 0 || isOffline}
-          className="inline-flex items-center rounded-lg bg-[#1d3a8a] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#16306f] disabled:cursor-not-allowed disabled:opacity-70"
-        >
-          {isSavingAll ? "Saving..." : "Save All"}
-        </button>
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={handleSaveAll}
+            disabled={isSavingAll || isSavingRow || isResyncing || draftRows.length === 0 || isOffline}
+            className="inline-flex items-center rounded-lg bg-[#1d3a8a] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#16306f] disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {isSavingAll ? "Saving..." : "Save All"}
+          </button>
+          <button
+            type="button"
+            onClick={handleResync}
+            disabled={isSavingAll || isSavingRow || isResyncing || draftRows.length === 0 || isOffline}
+            className="inline-flex items-center rounded-lg border border-[#c9a227] bg-[#fffaf0] px-4 py-2 text-sm font-semibold text-[#765b00] transition hover:bg-[#fff3c7] disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {isResyncing ? "Resyncing..." : "Resync Carry-Forward Values"}
+          </button>
+        </div>
 
         {successMessage ? (
           <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
