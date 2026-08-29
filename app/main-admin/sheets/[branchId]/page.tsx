@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { openMonthForBranch } from "../actions";
 import SheetFilters from "./SheetFilters";
 import SheetTableClient from "./SheetTableClient";
+import ResyncForwardButton from "./ResyncForwardButton";
 
 type PageProps = {
   params: Promise<{ branchId: string }> | { branchId: string };
@@ -80,6 +81,10 @@ export default async function MainAdminBranchSheetPage({ params, searchParams }:
           month={month}
           isSheetOpen={shouldOpenSheet}
         />
+
+        <div className="mt-4">
+          <ResyncForwardButton branchId={branchId} />
+        </div>
 
         <SheetTableClient
           key={`${branchId}-${month}-${shouldOpenSheet ? "open" : "closed"}`}

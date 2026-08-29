@@ -4,7 +4,12 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/rateLimit";
-import { ensureMonthRowsForBranch } from "@/lib/monthlySheetSync";
+import {
+  ensureMonthRowsForBranch,
+  cascadeMonthlySavings,
+  cascadeEmergencyContributions,
+  resyncMonthlySavingsForwardForBranch,
+} from "@/lib/monthlySheetSync";
 
 function revalidateSheetPath(branchId: string) {
   revalidatePath(`/main-admin/sheets/${branchId}`);
@@ -106,79 +111,6 @@ async function ensureAdminAccess() {
   }
 
   return { supabase, userId: user.id };
-}
-
-async function cascadeMonthlySavings(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  memberId: string,
-  month: string,
-  previousBalanceBf: number,
-  subs: number
-) {
-  const { data: laterRows, error } = await supabase
-    .from("monthly_savings")
-    .select("id, old_savings_bf, subs, month")
-    .eq("member_id", memberId)
-    .gt("month", month)
-    .order("month", { ascending: true });
-
-  if (error) throw error;
-
-  let priorPreviousBalanceBf = previousBalanceBf;
-  let priorSubs = subs;
-  for (const row of laterRows ?? []) {
-    const nextPreviousBalanceBf = priorPreviousBalanceBf + priorSubs;
-    const nextSubs = toNumber(row.subs);
-    const cumulativeSaving = toNumber(row.old_savings_bf) + nextPreviousBalanceBf + nextSubs;
-
-    const { error: updateError } = await supabase
-      .from("monthly_savings")
-      .update({
-        previous_balance_bf: nextPreviousBalanceBf,
-        cumulative_saving: cumulativeSaving,
-      })
-      .eq("id", row.id);
-
-    if (updateError) throw updateError;
-    priorPreviousBalanceBf = nextPreviousBalanceBf;
-    priorSubs = nextSubs;
-  }
-}
-
-async function cascadeEmergencyContributions(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  memberId: string,
-  month: string,
-  cumulativeEmergFund: number
-) {
-  const { data: laterRows, error } = await supabase
-    .from("emergency_contributions")
-    .select("id, emerg_subs, withdrawal, month")
-    .eq("member_id", memberId)
-    .gt("month", month)
-    .order("month", { ascending: true });
-
-  if (error) throw error;
-
-  let priorCumulativeEmergFund = cumulativeEmergFund;
-  for (const row of laterRows ?? []) {
-    const emergSubs = toNumber(row.emerg_subs);
-    const withdrawal = toNumber(row.withdrawal);
-    const nextCumulativeEmergFund = priorCumulativeEmergFund + emergSubs;
-    const emergencyBalance = nextCumulativeEmergFund - withdrawal;
-
-    const { error: updateError } = await supabase
-      .from("emergency_contributions")
-      .update({
-        previous_emerg_bf: priorCumulativeEmergFund,
-        cumulative_emerg_fund: nextCumulativeEmergFund,
-        emergency_balance: emergencyBalance,
-      })
-      .eq("id", row.id);
-
-    if (updateError) throw updateError;
-    priorCumulativeEmergFund = nextCumulativeEmergFund;
-  }
 }
 
 export async function openMonthForBranch(branchId: string, month: string): Promise<SheetRow[]> {
@@ -360,6 +292,7 @@ export async function updateMonthlyEntry(
       supabase,
       monthlyRow.member_id,
       monthlyRow.month,
+      oldSavingsBf,
       previousBalanceBf,
       subs
     );
@@ -409,6 +342,64 @@ export async function updateMonthlyEntryFromForm(formData: FormData): Promise<vo
 
   if (result.status === "error") {
     throw new Error(result.message);
+  }
+}
+
+/**
+ * Admin repair tool: re-derives every later month's old_savings_bf/previous_balance_bf/
+ * cumulative_saving (and the matching emergency_contributions fields) for this branch,
+ * anchored on each member's row at `fromMonth`. See resyncMonthlySavingsForwardForBranch
+ * for the walk itself - this wrapper just adds auth, rate limiting, and revalidation.
+ */
+export async function resyncMonthlySavingsForward(
+  branchId: string,
+  fromMonth: string
+): Promise<UpdateEntryResult> {
+  try {
+    const requestHeaders = await headers();
+    const ip = getClientIpFromHeaders(requestHeaders);
+    const rateLimit = checkRateLimit(ip, "resync_monthly_savings_forward", 10);
+    if (!rateLimit.allowed) {
+      return {
+        status: "error",
+        message: "Too many resync attempts. Please try again in 15 minutes.",
+      };
+    }
+
+    const normalizedFromMonth = normalizeMonth(fromMonth);
+    const { supabase } = await ensureAdminAccess();
+
+    const { data: branch, error: branchError } = await supabase
+      .from("branches")
+      .select("id")
+      .eq("id", branchId)
+      .maybeSingle();
+
+    if (branchError) throw branchError;
+    if (!branch) {
+      return { status: "error", message: "Branch not found." };
+    }
+
+    const { membersResynced } = await resyncMonthlySavingsForwardForBranch(
+      supabase,
+      branchId,
+      normalizedFromMonth
+    );
+
+    revalidateSheetPath(branchId);
+
+    return {
+      status: "success",
+      message:
+        membersResynced === 0
+          ? `No rows found for ${normalizedFromMonth} in this branch - nothing to resync.`
+          : `Resynced ${membersResynced} member${membersResynced === 1 ? "" : "s"} forward from ${normalizedFromMonth}.`,
+    };
+  } catch (error) {
+    return {
+      status: "error",
+      message: error instanceof Error && error.message ? error.message : "Unable to resync forward.",
+    };
   }
 }
 
@@ -648,6 +639,7 @@ export async function updateAllEntries(rows: UpdateAllEntriesInput[]): Promise<U
           supabase,
           update.memberId,
           update.month,
+          update.oldSavingsBf,
           update.previousBalanceBf,
           update.subs
         );
