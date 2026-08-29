@@ -28,6 +28,18 @@ function formatDate(value: string) {
   }).format(date);
 }
 
+function formatMonthLabel(month: string) {
+  if (!month) return "All months";
+  const date = new Date(`${month}-01T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) return month;
+
+  return new Intl.DateTimeFormat("en-KE", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(date);
+}
+
 export default async function MemberDashboardPage() {
   const supabase = await createClient();
 
@@ -100,36 +112,34 @@ export default async function MemberDashboardPage() {
 
   const [monthlyTotalsResult, latestBalanceResult, funeralTotalsResult, recentMonthlyResult] = memberId
     ? await Promise.all([
-        supabase.from("monthly_contributions").select("amount").eq("member_id", memberId),
+        supabase.from("monthly_savings").select("subs").eq("member_id", memberId),
         supabase
-          .from("monthly_contributions")
-          .select("running_balance")
+          .from("monthly_savings")
+          .select("cumulative_saving")
           .eq("member_id", memberId)
-          .order("entry_date", { ascending: false })
-          .order("created_at", { ascending: false })
+          .order("month", { ascending: false })
           .limit(1)
           .maybeSingle(),
-        supabase.from("funeral_contributions").select("amount").eq("member_id", memberId),
+        supabase.from("funeral_collections").select("amount").eq("member_id", memberId),
         supabase
-          .from("monthly_contributions")
-          .select("id, entry_date, amount")
+          .from("monthly_savings")
+          .select("id, month, subs")
           .eq("member_id", memberId)
-          .order("entry_date", { ascending: false })
-          .order("created_at", { ascending: false })
+          .order("month", { ascending: false })
           .limit(5),
       ])
     : [
+        { data: [] as Array<{ subs: number | string | null }> },
+        { data: null as { cumulative_saving: number | string | null } | null },
         { data: [] as Array<{ amount: number | string | null }> },
-        { data: null as { running_balance: number | string | null } | null },
-        { data: [] as Array<{ amount: number | string | null }> },
-        { data: [] as Array<{ id: string; entry_date: string; amount: number | string | null }> },
+        { data: [] as Array<{ id: string; month: string; subs: number | string | null }> },
       ];
 
   const totalMonthlyContributions = (monthlyTotalsResult.data ?? []).reduce(
-    (sum, row) => sum + toNumber(row.amount),
+    (sum, row) => sum + toNumber(row.subs),
     0
   );
-  const currentBalance = toNumber(latestBalanceResult.data?.running_balance ?? 0);
+  const currentBalance = toNumber(latestBalanceResult.data?.cumulative_saving ?? 0);
   const totalFuneralContributions = (funeralTotalsResult.data ?? []).reduce(
     (sum, row) => sum + toNumber(row.amount),
     0
@@ -212,15 +222,15 @@ export default async function MemberDashboardPage() {
               <table className="min-w-full divide-y divide-slate-200">
                 <thead className="bg-slate-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 sm:px-6">Date</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 sm:px-6">Amount</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 sm:px-6">Month</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 sm:px-6">Subs</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 bg-white">
                   {recentContributions.map((entry) => (
                     <tr key={entry.id} className="hover:bg-slate-50/70">
-                      <td className="px-4 py-3 text-sm text-slate-700 sm:px-6">{formatDate(entry.entry_date)}</td>
-                      <td className="px-4 py-3 text-sm font-medium text-[#1d3a8a] sm:px-6">{formatKsh(toNumber(entry.amount))}</td>
+                      <td className="px-4 py-3 text-sm text-slate-700 sm:px-6">{formatMonthLabel(entry.month)}</td>
+                      <td className="px-4 py-3 text-sm font-medium text-[#1d3a8a] sm:px-6">{formatKsh(toNumber(entry.subs))}</td>
                     </tr>
                   ))}
                 </tbody>

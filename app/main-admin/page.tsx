@@ -80,11 +80,7 @@ export default async function MainAdminDashboardPage() {
         .select("id", { count: "exact", head: true })
         .gte("created_at", `${monthStart}T00:00:00.000Z`)
         .lte("created_at", `${today}T23:59:59.999Z`),
-      supabase
-        .from("monthly_contributions")
-        .select("amount")
-        .gte("entry_date", monthStart)
-        .lte("entry_date", today),
+      supabase.from("monthly_savings").select("subs").eq("month", currentMonth),
       supabase
         .from("emergency_contributions")
         .select("emerg_subs")
@@ -97,7 +93,7 @@ export default async function MainAdminDashboardPage() {
     ]);
 
   const totalMonthlyContributions = (monthlyContributionsResult.data ?? []).reduce(
-    (sum, row) => sum + toNumber(row.amount),
+    (sum, row) => sum + toNumber(row.subs),
     0
   );
 

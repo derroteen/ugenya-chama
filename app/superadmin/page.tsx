@@ -72,6 +72,8 @@ export default async function SuperadminDashboardPage() {
   const monthStart = firstDayOfMonthIso();
   const today = todayIso();
 
+  const currentMonth = new Date().toISOString().slice(0, 7);
+
   const [activeMembersResult, totalBranchesResult, totalAdminsResult, monthlyContributionsResult, recentAdminsResult] =
     await Promise.all([
       supabase.from("members").select("id", { count: "exact", head: true }).eq("status", "active"),
@@ -80,11 +82,7 @@ export default async function SuperadminDashboardPage() {
         .from("profiles")
         .select("id", { count: "exact", head: true })
         .in("role", ["main_admin"]),
-      supabase
-        .from("monthly_contributions")
-        .select("amount")
-        .gte("entry_date", monthStart)
-        .lte("entry_date", today),
+      supabase.from("monthly_savings").select("subs").eq("month", currentMonth),
       supabase
         .from("profiles")
         .select("id, full_name, role, created_at, branches(name)")
@@ -94,7 +92,7 @@ export default async function SuperadminDashboardPage() {
     ]);
 
   const totalMonthlyContributions = (monthlyContributionsResult.data ?? []).reduce(
-    (sum, row) => sum + toNumber(row.amount),
+    (sum, row) => sum + toNumber(row.subs),
     0
   );
 
