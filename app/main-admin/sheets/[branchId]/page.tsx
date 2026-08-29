@@ -82,15 +82,15 @@ export default async function MainAdminBranchSheetPage({ params, searchParams }:
           isSheetOpen={shouldOpenSheet}
         />
 
-        <div className="mt-4">
-          <ResyncForwardButton branchId={branchId} />
-        </div>
-
         <SheetTableClient
           key={`${branchId}-${month}-${shouldOpenSheet ? "open" : "closed"}`}
           rows={rows}
           isSheetOpen={shouldOpenSheet}
         />
+
+        <div className="mt-6 border-t border-slate-100 pt-4">
+          <ResyncForwardButton branchId={branchId} />
+        </div>
       </section>
     </main>
   );

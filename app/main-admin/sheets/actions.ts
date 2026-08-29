@@ -6,8 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/rateLimit";
 import {
   ensureMonthRowsForBranch,
-  cascadeMonthlySavings,
-  cascadeEmergencyContributions,
+  healBranchCarryForward,
   resyncMonthlySavingsForwardForBranch,
 } from "@/lib/monthlySheetSync";
 
@@ -33,6 +32,8 @@ export type SheetRow = {
   memberNo: string;
   memberName: string;
   sheetOrder: number | null;
+  isFirstMonth: boolean;
+  bfOverridden: boolean;
   kbgSharesBf: number;
   oldSavingsBf: number;
   previousBalanceBf: number;
@@ -60,6 +61,12 @@ export type UpdateAllEntriesInput = {
   previousEmergBf: string | number;
   emergSubs: string | number;
   withdrawal: string | number;
+  /**
+   * true when the caller deliberately unlocked and edited this row's brought-forward
+   * figures (see SheetTableClient's "Fix brought-forward figures" flow) - the server
+   * only ever sets bf_overridden to true when this is true; it never clears it here.
+   */
+  bfOverridden?: boolean;
 };
 
 function toNumber(value: unknown) {
@@ -118,13 +125,14 @@ export async function openMonthForBranch(branchId: string, month: string): Promi
   const { supabase, userId } = await ensureAdminAccess();
 
   await ensureMonthRowsForBranch(supabase, branchId, normalizedMonth, userId);
+  await healBranchCarryForward(supabase, branchId);
 
   const [{ data: monthlyRows, error: monthlyRowsError }, { data: emergencyRows, error: emergencyRowsError }] =
     await Promise.all([
       supabase
         .from("monthly_savings")
         .select(
-          "id, member_id, month, previous_balance_bf, old_savings_bf, subs, cumulative_saving, members(member_id, full_name, kbg_shares_bf, sheet_order)"
+          "id, member_id, month, previous_balance_bf, old_savings_bf, subs, cumulative_saving, bf_overridden, members(member_id, full_name, kbg_shares_bf, sheet_order)"
         )
         .eq("branch_id", branchId)
         .eq("month", normalizedMonth)
@@ -139,6 +147,24 @@ export async function openMonthForBranch(branchId: string, month: string): Promi
 
   if (monthlyRowsError) throw monthlyRowsError;
   if (emergencyRowsError) throw emergencyRowsError;
+
+  const memberIds = (monthlyRows ?? []).map((row) => row.member_id);
+  const membersWithEarlierMonth = new Set<string>();
+
+  if (memberIds.length > 0) {
+    const { data: earlierMonthRows, error: earlierMonthRowsError } = await supabase
+      .from("monthly_savings")
+      .select("member_id")
+      .eq("branch_id", branchId)
+      .lt("month", normalizedMonth)
+      .in("member_id", memberIds);
+
+    if (earlierMonthRowsError) throw earlierMonthRowsError;
+
+    for (const row of earlierMonthRows ?? []) {
+      membersWithEarlierMonth.add(row.member_id);
+    }
+  }
 
   const emergencyByMember = new Map<string, (typeof emergencyRows)[number]>();
   for (const row of emergencyRows ?? []) {
@@ -170,6 +196,8 @@ export async function openMonthForBranch(branchId: string, month: string): Promi
       memberNo: member?.member_id ?? "-",
       memberName: member?.full_name ?? "Unknown Member",
       sheetOrder: member?.sheet_order ?? null,
+      isFirstMonth: !membersWithEarlierMonth.has(row.member_id),
+      bfOverridden: Boolean(row.bf_overridden),
       kbgSharesBf: toNumber(member?.kbg_shares_bf),
       oldSavingsBf: toNumber(row.old_savings_bf),
       previousBalanceBf: toNumber(row.previous_balance_bf),
@@ -189,160 +217,6 @@ export async function openMonthForBranch(branchId: string, month: string): Promi
     if (b.sheetOrder == null) return -1;
     return a.sheetOrder - b.sheetOrder;
   });
-}
-
-export async function updateMonthlyEntry(
-  monthlySavingsId: string,
-  emergencyContributionId: string,
-  kbgSharesBfInput: string,
-  oldSavingsBfInput: string,
-  previousBalanceBfInput: string,
-  subsInput: string,
-  previousEmergBfInput: string,
-  emergSubsInput: string,
-  withdrawalInput: string
-): Promise<UpdateEntryResult> {
-  try {
-    const requestHeaders = await headers();
-    const ip = getClientIpFromHeaders(requestHeaders);
-    const rateLimit = checkRateLimit(ip, "update_monthly_entry", 60);
-    if (!rateLimit.allowed) {
-      return {
-        status: "error",
-        message: "Too many row save attempts. Please try again in 15 minutes.",
-      };
-    }
-
-    const { supabase } = await ensureAdminAccess();
-
-    const kbgSharesBf = parseMoney(kbgSharesBfInput);
-    const oldSavingsBf = parseMoney(oldSavingsBfInput);
-    const previousBalanceBf = parseMoney(previousBalanceBfInput);
-    const subs = parseMoney(subsInput);
-    const previousEmergBf = parseMoney(previousEmergBfInput);
-    const emergSubs = parseMoney(emergSubsInput);
-    const withdrawal = parseMoney(withdrawalInput);
-
-    const { data: monthlyRow, error: monthlyRowError } = await supabase
-      .from("monthly_savings")
-      .select("id, branch_id, month, member_id")
-      .eq("id", monthlySavingsId)
-      .single();
-
-    if (monthlyRowError || !monthlyRow) {
-      throw monthlyRowError ?? new Error("Monthly row not found.");
-    }
-
-    const { data: emergencyRow, error: emergencyRowError } = await supabase
-      .from("emergency_contributions")
-      .select("id")
-      .eq("id", emergencyContributionId)
-      .single();
-
-    if (emergencyRowError || !emergencyRow) {
-      throw emergencyRowError ?? new Error("Emergency row not found.");
-    }
-
-    const cumulativeSaving = oldSavingsBf + previousBalanceBf + subs;
-    const cumulativeEmergFund = previousEmergBf + emergSubs;
-    const emergencyBalance = cumulativeEmergFund - withdrawal;
-
-    if (emergencyBalance < 0) {
-      return {
-        status: "error",
-        message: "Withdrawal cannot exceed the cumulative emergency fund.",
-      };
-    }
-
-    const { error: memberUpdateError } = await supabase
-      .from("members")
-      .update({
-        kbg_shares_bf: kbgSharesBf,
-      })
-      .eq("id", monthlyRow.member_id);
-
-    if (memberUpdateError) throw memberUpdateError;
-
-    const { error: monthlyUpdateError } = await supabase
-      .from("monthly_savings")
-      .update({
-        old_savings_bf: oldSavingsBf,
-        previous_balance_bf: previousBalanceBf,
-        subs,
-        cumulative_saving: cumulativeSaving,
-      })
-      .eq("id", monthlySavingsId);
-
-    if (monthlyUpdateError) throw monthlyUpdateError;
-
-    const { error: emergencyUpdateError } = await supabase
-      .from("emergency_contributions")
-      .update({
-        previous_emerg_bf: previousEmergBf,
-        emerg_subs: emergSubs,
-        cumulative_emerg_fund: cumulativeEmergFund,
-        withdrawal,
-        emergency_balance: emergencyBalance,
-      })
-      .eq("id", emergencyContributionId);
-
-    if (emergencyUpdateError) throw emergencyUpdateError;
-
-    await cascadeMonthlySavings(
-      supabase,
-      monthlyRow.member_id,
-      monthlyRow.month,
-      oldSavingsBf,
-      previousBalanceBf,
-      subs
-    );
-    await cascadeEmergencyContributions(
-      supabase,
-      monthlyRow.member_id,
-      monthlyRow.month,
-      cumulativeEmergFund
-    );
-
-    revalidateSheetPath(monthlyRow.branch_id);
-
-    return {
-      status: "success",
-      message: "Row saved successfully.",
-    };
-  } catch (error) {
-    return {
-      status: "error",
-      message: error instanceof Error && error.message ? error.message : "Unable to save row.",
-    };
-  }
-}
-
-export async function updateMonthlyEntryFromForm(formData: FormData): Promise<void> {
-  const monthlySavingsId = String(formData.get("monthlySavingsId") ?? "").trim();
-  const emergencyContributionId = String(formData.get("emergencyContributionId") ?? "").trim();
-  const kbgSharesBf = String(formData.get("kbgSharesBf") ?? "");
-  const oldSavingsBf = String(formData.get("oldSavingsBf") ?? "");
-  const previousBalanceBf = String(formData.get("previousBalanceBf") ?? "");
-  const subs = String(formData.get("subs") ?? "");
-  const previousEmergBf = String(formData.get("previousEmergBf") ?? "");
-  const emergSubs = String(formData.get("emergSubs") ?? "");
-  const withdrawal = String(formData.get("withdrawal") ?? "");
-
-  const result = await updateMonthlyEntry(
-    monthlySavingsId,
-    emergencyContributionId,
-    kbgSharesBf,
-    oldSavingsBf,
-    previousBalanceBf,
-    subs,
-    previousEmergBf,
-    emergSubs,
-    withdrawal
-  );
-
-  if (result.status === "error") {
-    throw new Error(result.message);
-  }
 }
 
 /**
@@ -442,6 +316,7 @@ export async function updateAllEntries(rows: UpdateAllEntriesInput[]): Promise<U
       cumulativeEmergFund: number;
       withdrawal: number;
       emergencyBalance: number;
+      bfOverridden: boolean;
     }> = [];
 
     for (let index = 0; index < rows.length; index += 1) {
@@ -581,6 +456,7 @@ export async function updateAllEntries(rows: UpdateAllEntriesInput[]): Promise<U
         cumulativeEmergFund,
         withdrawal,
         emergencyBalance,
+        bfOverridden: row.bfOverridden === true,
       });
     }
 
@@ -599,14 +475,19 @@ export async function updateAllEntries(rows: UpdateAllEntriesInput[]): Promise<U
         };
       }
 
+      const monthlyUpdatePayload: Record<string, number | boolean> = {
+        old_savings_bf: update.oldSavingsBf,
+        previous_balance_bf: update.previousBalanceBf,
+        subs: update.subs,
+        cumulative_saving: update.cumulativeSaving,
+      };
+      if (update.bfOverridden) {
+        monthlyUpdatePayload.bf_overridden = true;
+      }
+
       const { error: monthlyUpdateError } = await supabase
         .from("monthly_savings")
-        .update({
-          old_savings_bf: update.oldSavingsBf,
-          previous_balance_bf: update.previousBalanceBf,
-          subs: update.subs,
-          cumulative_saving: update.cumulativeSaving,
-        })
+        .update(monthlyUpdatePayload)
         .eq("id", update.monthlySavingsId);
 
       if (monthlyUpdateError) {
@@ -616,43 +497,26 @@ export async function updateAllEntries(rows: UpdateAllEntriesInput[]): Promise<U
         };
       }
 
+      const emergencyUpdatePayload: Record<string, number | boolean> = {
+        previous_emerg_bf: update.previousEmergBf,
+        emerg_subs: update.emergSubs,
+        cumulative_emerg_fund: update.cumulativeEmergFund,
+        withdrawal: update.withdrawal,
+        emergency_balance: update.emergencyBalance,
+      };
+      if (update.bfOverridden) {
+        emergencyUpdatePayload.bf_overridden = true;
+      }
+
       const { error: emergencyUpdateError } = await supabase
         .from("emergency_contributions")
-        .update({
-          previous_emerg_bf: update.previousEmergBf,
-          emerg_subs: update.emergSubs,
-          cumulative_emerg_fund: update.cumulativeEmergFund,
-          withdrawal: update.withdrawal,
-          emergency_balance: update.emergencyBalance,
-        })
+        .update(emergencyUpdatePayload)
         .eq("id", update.emergencyContributionId);
 
       if (emergencyUpdateError) {
         return {
           status: "error",
           message: `Row ${update.rowNumber} (${update.memberLabel}) could not be saved.`,
-        };
-      }
-
-      try {
-        await cascadeMonthlySavings(
-          supabase,
-          update.memberId,
-          update.month,
-          update.oldSavingsBf,
-          update.previousBalanceBf,
-          update.subs
-        );
-        await cascadeEmergencyContributions(
-          supabase,
-          update.memberId,
-          update.month,
-          update.cumulativeEmergFund
-        );
-      } catch {
-        return {
-          status: "error",
-          message: `Row ${update.rowNumber} (${update.memberLabel}) could not update later months.`,
         };
       }
     }

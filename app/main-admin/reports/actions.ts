@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { ensureMonthRowsForBranch, isMonthUpToDate } from "@/lib/monthlySheetSync";
+import { ensureMonthRowsForBranch, healBranchCarryForward, isMonthUpToDate } from "@/lib/monthlySheetSync";
 
 export type MonthlyReportTotals = {
   subs: number;
@@ -145,6 +145,11 @@ export async function generateMonthlyReport(month: string): Promise<MonthlyRepor
       branches.map((branch) => ensureMonthRowsForBranch(supabase, branch.id, normalizedMonth, userId))
     );
   }
+
+  // Heal carry-forward values for every branch unconditionally - this only corrects rows
+  // that already exist and never creates new ones, so it is safe to run for any month
+  // (past, current, or future) without the isMonthUpToDate guard.
+  await Promise.all(branches.map((branch) => healBranchCarryForward(supabase, branch.id)));
 
   const [monthlyResult, emergencyResult] = await Promise.all([
     supabase

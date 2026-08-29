@@ -398,6 +398,11 @@ create table if not exists monthly_savings (
   previous_balance_bf numeric(12,2) not null default 0,
   subs numeric(12,2) not null default 0 check (subs >= 0),
   cumulative_saving numeric(12,2) not null default 0,
+  -- Marks a row whose brought-forward figures were deliberately corrected by hand, so
+  -- healBranchCarryForward's automatic healing (lib/monthlySheetSync.ts) never silently
+  -- reverts a real correction - it trusts an overridden row as-is and anchors off it
+  -- going forward instead of recomputing it.
+  bf_overridden boolean not null default false,
   created_by uuid references auth.users(id),
   created_at timestamptz not null default now(),
   unique (branch_id, member_id, month)
@@ -416,6 +421,8 @@ create table if not exists emergency_contributions (
   cumulative_emerg_fund numeric(12,2) not null default 0,
   withdrawal numeric(12,2) not null default 0 check (withdrawal >= 0),
   emergency_balance numeric(12,2) not null default 0,
+  -- Same purpose as monthly_savings.bf_overridden above.
+  bf_overridden boolean not null default false,
   created_by uuid references auth.users(id),
   created_at timestamptz not null default now(),
   unique (branch_id, member_id, month)

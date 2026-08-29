@@ -4,7 +4,6 @@ import { useMemo, useState, useTransition } from "react";
 import {
   type SheetRow,
   updateAllEntries,
-  updateMonthlyEntry,
 } from "../actions";
 import { useOnlineStatus } from "@/lib/useOnlineStatus";
 import OfflineBanner from "@/app/components/OfflineBanner";
@@ -99,11 +98,10 @@ function toSuccessMessage(message: string) {
 }
 
 export default function SheetTableClient({ rows, isSheetOpen }: SheetTableClientProps) {
-  const [isSavingAll, startSaveAll] = useTransition();
-  const [isSavingRow, startSaveRow] = useTransition();
-  const [savingRowId, setSavingRowId] = useState<string | null>(null);
+  const [isSaving, startSave] = useTransition();
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [unlockedRowIds, setUnlockedRowIds] = useState<Set<string>>(new Set());
   const isOffline = !useOnlineStatus();
   const [draftRows, setDraftRows] = useState<RowDraft[]>(() =>
     rows.map((row) => ({
@@ -155,63 +153,45 @@ export default function SheetTableClient({ rows, isSheetOpen }: SheetTableClient
     });
   };
 
-  const syncRowAfterSave = (rowIndex: number) => {
-    setDraftRows((current) => {
-      const next = [...current];
-      next[rowIndex] = syncComputedValues(next[rowIndex]);
+  const unlockBroughtForward = (monthlySavingsId: string) => {
+    setUnlockedRowIds((current) => {
+      const next = new Set(current);
+      next.add(monthlySavingsId);
       return next;
     });
   };
 
-  const handleSaveRow = (rowIndex: number) => {
-    const row = draftRows[rowIndex];
+  const isRowLocked = (row: RowDraft) => !row.isFirstMonth && !unlockedRowIds.has(row.monthlySavingsId);
 
-    setErrorMessage("");
-    setSuccessMessage("");
-    setSavingRowId(row.monthlySavingsId);
-
-    startSaveRow(async () => {
-      const result = await updateMonthlyEntry(
-        row.monthlySavingsId,
-        row.emergencyContributionId,
-        row.kbgSharesBfInput,
-        row.oldSavingsBfInput,
-        row.previousBalanceBfInput,
-        row.subsInput,
-        row.previousEmergBfInput,
-        row.emergSubsInput,
-        row.withdrawalInput
-      );
-
-      setSavingRowId(null);
-
-      if (result.status === "error") {
-        setErrorMessage(result.message);
-        return;
-      }
-
-      syncRowAfterSave(rowIndex);
-      setSuccessMessage(toSuccessMessage(result.message));
-    });
-  };
-
-  const handleSaveAll = () => {
+  const handleSave = () => {
     setErrorMessage("");
     setSuccessMessage("");
 
-    startSaveAll(async () => {
+    startSave(async () => {
       const result = await updateAllEntries(
-        draftRows.map((row) => ({
-          monthlySavingsId: row.monthlySavingsId,
-          emergencyContributionId: row.emergencyContributionId,
-          kbgSharesBf: row.kbgSharesBfInput,
-          oldSavingsBf: row.oldSavingsBfInput,
-          previousBalanceBf: row.previousBalanceBfInput,
-          subs: row.subsInput,
-          previousEmergBf: row.previousEmergBfInput,
-          emergSubs: row.emergSubsInput,
-          withdrawal: row.withdrawalInput,
-        }))
+        draftRows.map((row) => {
+          const original = rows.find((r) => r.monthlySavingsId === row.monthlySavingsId);
+          const bfEdited =
+            !row.isFirstMonth &&
+            unlockedRowIds.has(row.monthlySavingsId) &&
+            original != null &&
+            (toNumber(row.oldSavingsBfInput) !== original.oldSavingsBf ||
+              toNumber(row.previousBalanceBfInput) !== original.previousBalanceBf ||
+              toNumber(row.previousEmergBfInput) !== original.previousEmergBf);
+
+          return {
+            monthlySavingsId: row.monthlySavingsId,
+            emergencyContributionId: row.emergencyContributionId,
+            kbgSharesBf: row.kbgSharesBfInput,
+            oldSavingsBf: row.oldSavingsBfInput,
+            previousBalanceBf: row.previousBalanceBfInput,
+            subs: row.subsInput,
+            previousEmergBf: row.previousEmergBfInput,
+            emergSubs: row.emergSubsInput,
+            withdrawal: row.withdrawalInput,
+            bfOverridden: bfEdited,
+          };
+        })
       );
 
       if (result.status === "error") {
@@ -232,11 +212,11 @@ export default function SheetTableClient({ rows, isSheetOpen }: SheetTableClient
         <div className="flex flex-wrap gap-3">
           <button
             type="button"
-            onClick={handleSaveAll}
-            disabled={isSavingAll || isSavingRow || draftRows.length === 0 || isOffline}
+            onClick={handleSave}
+            disabled={isSaving || draftRows.length === 0 || isOffline}
             className="inline-flex items-center rounded-lg bg-[#1d3a8a] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#16306f] disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {isSavingAll ? "Saving..." : "Save All"}
+            {isSaving ? "Saving..." : "Save"}
           </button>
         </div>
 
@@ -307,7 +287,7 @@ export default function SheetTableClient({ rows, isSheetOpen }: SheetTableClient
                   const cumulativeSaving = calculateCumulativeSaving(row);
                   const cumulativeEmergFund = calculateCumulativeEmergFund(row);
                   const emergencyBalance = calculateEmergencyBalance(row);
-                  const rowIsSaving = isSavingRow && savingRowId === row.monthlySavingsId;
+                  const locked = isRowLocked(row);
                   return (
                     <tr key={row.monthlySavingsId} className="hover:bg-slate-50/70 align-top">
                       <td className="px-3 py-3 text-sm text-slate-700">{row.sheetOrder ?? "-"}</td>
@@ -316,37 +296,55 @@ export default function SheetTableClient({ rows, isSheetOpen }: SheetTableClient
                         <div className="text-xs text-slate-500">{row.memberNo}</div>
                       </td>
                       <td className="px-3 py-3 text-sm text-slate-700">
-                        <input
-                          name="kbgSharesBf"
-                          type="number"
-                          min={0}
-                          step="0.01"
-                          value={row.kbgSharesBfInput}
-                          onChange={(event) => updateDraftField(index, "kbgSharesBfInput", event.target.value)}
-                          className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
-                        />
+                        {locked ? (
+                          <span className="inline-block w-28 px-2 py-1.5 text-sm text-slate-700">
+                            {formatKsh(toNumber(row.kbgSharesBfInput))}
+                          </span>
+                        ) : (
+                          <input
+                            name="kbgSharesBf"
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            value={row.kbgSharesBfInput}
+                            onChange={(event) => updateDraftField(index, "kbgSharesBfInput", event.target.value)}
+                            className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+                          />
+                        )}
                       </td>
                       <td className="px-3 py-3 text-sm text-slate-700">
-                        <input
-                          name="oldSavingsBf"
-                          type="number"
-                          min={0}
-                          step="0.01"
-                          value={row.oldSavingsBfInput}
-                          onChange={(event) => updateDraftField(index, "oldSavingsBfInput", event.target.value)}
-                          className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
-                        />
+                        {locked ? (
+                          <span className="inline-block w-28 px-2 py-1.5 text-sm text-slate-700">
+                            {formatKsh(toNumber(row.oldSavingsBfInput))}
+                          </span>
+                        ) : (
+                          <input
+                            name="oldSavingsBf"
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            value={row.oldSavingsBfInput}
+                            onChange={(event) => updateDraftField(index, "oldSavingsBfInput", event.target.value)}
+                            className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+                          />
+                        )}
                       </td>
                       <td className="px-3 py-3 text-sm text-slate-700">
-                        <input
-                          name="previousBalanceBf"
-                          type="number"
-                          min={0}
-                          step="0.01"
-                          value={row.previousBalanceBfInput}
-                          onChange={(event) => updateDraftField(index, "previousBalanceBfInput", event.target.value)}
-                          className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
-                        />
+                        {locked ? (
+                          <span className="inline-block w-28 px-2 py-1.5 text-sm text-slate-700">
+                            {formatKsh(toNumber(row.previousBalanceBfInput))}
+                          </span>
+                        ) : (
+                          <input
+                            name="previousBalanceBf"
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            value={row.previousBalanceBfInput}
+                            onChange={(event) => updateDraftField(index, "previousBalanceBfInput", event.target.value)}
+                            className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+                          />
+                        )}
                       </td>
 
                       <td className="px-3 py-3 text-sm text-slate-700">
@@ -362,15 +360,21 @@ export default function SheetTableClient({ rows, isSheetOpen }: SheetTableClient
                       </td>
                       <td className="px-3 py-3 text-sm font-semibold text-[#0f1729]">{formatKsh(cumulativeSaving)}</td>
                       <td className="px-3 py-3 text-sm text-slate-700">
-                        <input
-                          name="previousEmergBf"
-                          type="number"
-                          min={0}
-                          step="0.01"
-                          value={row.previousEmergBfInput}
-                          onChange={(event) => updateDraftField(index, "previousEmergBfInput", event.target.value)}
-                          className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
-                        />
+                        {locked ? (
+                          <span className="inline-block w-28 px-2 py-1.5 text-sm text-slate-700">
+                            {formatKsh(toNumber(row.previousEmergBfInput))}
+                          </span>
+                        ) : (
+                          <input
+                            name="previousEmergBf"
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            value={row.previousEmergBfInput}
+                            onChange={(event) => updateDraftField(index, "previousEmergBfInput", event.target.value)}
+                            className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+                          />
+                        )}
                       </td>
                       <td className="px-3 py-3 text-sm text-slate-700">
                         <input
@@ -397,14 +401,16 @@ export default function SheetTableClient({ rows, isSheetOpen }: SheetTableClient
                       </td>
                       <td className="px-3 py-3 text-sm font-semibold text-[#0f1729]">{formatKsh(emergencyBalance)}</td>
                       <td className="px-3 py-3 text-right text-sm">
-                        <button
-                          type="button"
-                          onClick={() => handleSaveRow(index)}
-                          disabled={isSavingAll || isSavingRow || isOffline}
-                          className="inline-flex items-center rounded-lg bg-[#1d3a8a] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#16306f] disabled:cursor-not-allowed disabled:opacity-70"
-                        >
-                          {rowIsSaving ? "Saving..." : "Save Row"}
-                        </button>
+                        {locked ? (
+                          <button
+                            type="button"
+                            onClick={() => unlockBroughtForward(row.monthlySavingsId)}
+                            disabled={isSaving}
+                            className="text-xs font-semibold text-[#1d3a8a] underline decoration-dotted underline-offset-2 transition hover:text-[#16306f] disabled:cursor-not-allowed disabled:opacity-70"
+                          >
+                            Fix brought-forward figures
+                          </button>
+                        ) : null}
                       </td>
                     </tr>
                   );

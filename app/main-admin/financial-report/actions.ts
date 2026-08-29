@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { ensureMonthRowsForBranch, isMonthUpToDate } from "@/lib/monthlySheetSync";
+import { ensureMonthRowsForBranch, healBranchCarryForward, isMonthUpToDate } from "@/lib/monthlySheetSync";
 
 export type VentureFinancialSummary = {
   ventureId: string;
@@ -132,14 +132,19 @@ export async function generateFinancialReport(month: string): Promise<FinancialR
   // Backfill this month's row for every active member in every branch first, same as the
   // monthly PDF report - otherwise totalSubs/totalEmergencyContributions silently exclude
   // any branch whose sheet nobody has opened for this month yet. Skipped for a future month.
-  if (isMonthUpToDate(normalizedMonth)) {
-    const { data: branchList, error: branchesError } = await supabase.from("branches").select("id");
-    if (branchesError) throw branchesError;
+  const { data: branchList, error: branchesError } = await supabase.from("branches").select("id");
+  if (branchesError) throw branchesError;
 
+  if (isMonthUpToDate(normalizedMonth)) {
     await Promise.all(
       (branchList ?? []).map((branch) => ensureMonthRowsForBranch(supabase, branch.id, normalizedMonth, userId))
     );
   }
+
+  // Heal carry-forward values for every branch unconditionally - this only corrects rows
+  // that already exist and never creates new ones, so it is safe to run for any month
+  // (past, current, or future) without the isMonthUpToDate guard.
+  await Promise.all((branchList ?? []).map((branch) => healBranchCarryForward(supabase, branch.id)));
 
   const startDate = `${normalizedMonth}-01`;
   const [year, monthNumber] = normalizedMonth.split("-").map(Number);
