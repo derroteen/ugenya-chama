@@ -142,28 +142,30 @@ export default function PassbookClient({ initialData }: PassbookClientProps) {
             </div>
           ) : (
             <div className="mt-4 overflow-hidden rounded-xl border border-slate-200">
-              <table className="min-w-full divide-y divide-slate-200 text-left">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">Month</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">Old Savings B/F</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">Previous Balance B/F</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">Subs</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">Cumulative Saving</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
-                  {data.savingsRows.map((row) => (
-                    <tr key={row.month} className="hover:bg-slate-50/70">
-                      <td className="px-4 py-3 text-sm text-slate-700">{formatMonthLabel(row.month)}</td>
-                      <td className="px-4 py-3 text-sm text-slate-700">{formatAmount(row.oldSavingsBf)}</td>
-                      <td className="px-4 py-3 text-sm text-slate-700">{formatAmount(row.previousBalanceBf)}</td>
-                      <td className="px-4 py-3 text-sm text-slate-700">{formatAmount(row.subs)}</td>
-                      <td className="px-4 py-3 text-sm font-medium text-[#1d3a8a]">{formatAmount(row.cumulativeSaving)}</td>
+              <div className="w-full overflow-x-auto" style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-x pan-y" }}>
+                <table className="min-w-[640px] divide-y divide-slate-200 text-left">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">Month</th>
+                      <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">Old Savings B/F</th>
+                      <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">Previous Balance B/F</th>
+                      <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">Subs</th>
+                      <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">Cumulative Saving</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 bg-white">
+                    {data.savingsRows.map((row) => (
+                      <tr key={row.month} className="hover:bg-slate-50/70">
+                        <td className="px-4 py-3 text-sm text-slate-700">{formatMonthLabel(row.month)}</td>
+                        <td className="px-4 py-3 text-sm text-slate-700">{formatAmount(row.oldSavingsBf)}</td>
+                        <td className="px-4 py-3 text-sm text-slate-700">{formatAmount(row.previousBalanceBf)}</td>
+                        <td className="px-4 py-3 text-sm text-slate-700">{formatAmount(row.subs)}</td>
+                        <td className="px-4 py-3 text-sm font-medium text-[#1d3a8a]">{formatAmount(row.cumulativeSaving)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </section>
@@ -176,28 +178,30 @@ export default function PassbookClient({ initialData }: PassbookClientProps) {
             </div>
           ) : (
             <div className="mt-4 overflow-hidden rounded-xl border border-slate-200">
-              <table className="min-w-full divide-y divide-slate-200 text-left">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">Month</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">Previous Emerg B/F</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">Emerg Subs</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">Withdrawal</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">Emergency Balance</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
-                  {data.emergencyRows.map((row) => (
-                    <tr key={row.month} className="hover:bg-slate-50/70">
-                      <td className="px-4 py-3 text-sm text-slate-700">{formatMonthLabel(row.month)}</td>
-                      <td className="px-4 py-3 text-sm text-slate-700">{formatAmount(row.previousEmergBf)}</td>
-                      <td className="px-4 py-3 text-sm text-slate-700">{formatAmount(row.emergSubs)}</td>
-                      <td className="px-4 py-3 text-sm text-slate-700">{formatAmount(row.withdrawal)}</td>
-                      <td className="px-4 py-3 text-sm font-medium text-[#1d3a8a]">{formatAmount(row.emergencyBalance)}</td>
+              <div className="w-full overflow-x-auto" style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-x pan-y" }}>
+                <table className="min-w-[640px] divide-y divide-slate-200 text-left">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">Month</th>
+                      <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">Previous Emerg B/F</th>
+                      <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">Emerg Subs</th>
+                      <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">Withdrawal</th>
+                      <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">Emergency Balance</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 bg-white">
+                    {data.emergencyRows.map((row) => (
+                      <tr key={row.month} className="hover:bg-slate-50/70">
+                        <td className="px-4 py-3 text-sm text-slate-700">{formatMonthLabel(row.month)}</td>
+                        <td className="px-4 py-3 text-sm text-slate-700">{formatAmount(row.previousEmergBf)}</td>
+                        <td className="px-4 py-3 text-sm text-slate-700">{formatAmount(row.emergSubs)}</td>
+                        <td className="px-4 py-3 text-sm text-slate-700">{formatAmount(row.withdrawal)}</td>
+                        <td className="px-4 py-3 text-sm font-medium text-[#1d3a8a]">{formatAmount(row.emergencyBalance)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </section>

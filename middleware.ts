@@ -145,35 +145,6 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  if (user && role === 'member' && matchesPrefix(pathname, '/member')) {
-    const { data: member } = await supabase
-      .from('members')
-      .select('must_change_password')
-      .eq('auth_id', user.id)
-      .single()
-
-    const mustChangePassword = member?.must_change_password === true
-    const isChangePasswordPath = pathname === '/member/change-password'
-
-    if (mustChangePassword && !isChangePasswordPath) {
-      const mustChangeUrl = new URL('/member/change-password', request.url)
-      const redirectResponse = redirectIfDifferent(request, mustChangeUrl)
-      if (redirectResponse) {
-        return redirectResponse
-      }
-      return response
-    }
-
-    if (!mustChangePassword && isChangePasswordPath) {
-      const memberHomeUrl = new URL('/member', request.url)
-      const redirectResponse = redirectIfDifferent(request, memberHomeUrl)
-      if (redirectResponse) {
-        return redirectResponse
-      }
-      return response
-    }
-  }
-
   return response
 }
 
