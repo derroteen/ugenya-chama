@@ -40,6 +40,7 @@ const roleLinks: Record<Role, NavLinkConfig[]> = {
     { label: "Dashboard", href: "/member", icon: "dashboard" },
     { label: "Passbook", href: "/member/passbook", icon: "dashboard" },
     { label: "Announcements", href: "/member/announcements", icon: "dashboard" },
+    { label: "By-Laws", href: "/member/bylaws", icon: "dashboard" },
     { label: "Settings", href: "/settings", icon: "settings" },
   ],
 };
