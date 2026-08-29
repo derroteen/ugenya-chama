@@ -23,6 +23,7 @@ const roleLinks: Record<Role, NavLinkConfig[]> = {
     { label: "Dashboard", href: "/superadmin", icon: "dashboard" },
     { label: "Members", href: "/main-admin/members", icon: "members" },
     { label: "Manage Admins", href: "/superadmin/admins", icon: "admins" },
+    { label: "Constitution", href: "/member/constitution", icon: "dashboard" },
     { label: "Settings", href: "/settings", icon: "settings" },
   ],
   main_admin: [
@@ -34,6 +35,7 @@ const roleLinks: Record<Role, NavLinkConfig[]> = {
     { label: "Funeral Collections", href: "/main-admin/funeral-sheets", icon: "branches" },
     { label: "Monthly Ledger Report", href: "/main-admin/reports", icon: "dashboard" },
     { label: "Announcements", href: "/main-admin/announcements", icon: "dashboard" },
+    { label: "Constitution", href: "/member/constitution", icon: "dashboard" },
     { label: "Settings", href: "/settings", icon: "settings" },
   ],
   member: [
@@ -41,6 +43,7 @@ const roleLinks: Record<Role, NavLinkConfig[]> = {
     { label: "Passbook", href: "/member/passbook", icon: "dashboard" },
     { label: "Announcements", href: "/member/announcements", icon: "dashboard" },
     { label: "By-Laws", href: "/member/bylaws", icon: "dashboard" },
+    { label: "Constitution", href: "/member/constitution", icon: "dashboard" },
     { label: "Settings", href: "/settings", icon: "settings" },
   ],
 };

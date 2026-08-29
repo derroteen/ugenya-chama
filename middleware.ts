@@ -7,6 +7,7 @@ const protectedRouteRoles: Array<{ prefix: string; allowedRoles: Role[] }> = [
   { prefix: '/superadmin', allowedRoles: ['superadmin'] },
   { prefix: '/main-admin', allowedRoles: ['superadmin', 'main_admin'] },
   { prefix: '/branch-admin', allowedRoles: ['superadmin', 'main_admin'] },
+  { prefix: '/member/constitution', allowedRoles: ['superadmin', 'main_admin', 'member'] },
   { prefix: '/member', allowedRoles: ['member'] },
   { prefix: '/settings', allowedRoles: ['superadmin', 'main_admin', 'member'] },
 ]
