@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getNextSheetOrder } from "@/lib/members/nextSheetOrder";
 import NewMemberForm from "./NewMemberForm";
 import { initialNewMemberFormState } from "./form-state";
 
@@ -71,6 +72,10 @@ export default async function NewMainAdminMemberPage({ searchParams }: PageProps
   const branchIdForForm = selectedBranch?.id ?? ownBranchId;
   const displayBranchName = selectedBranch?.name ?? ownBranchName ?? "No branch assigned";
 
+  const suggestedSheetOrder = branchIdForForm
+    ? await getNextSheetOrder(supabase, branchIdForForm).catch(() => null)
+    : null;
+
   return (
     <main className="bg-[#eef2ff] px-4 py-10 text-[#475569] sm:px-6 lg:px-8 lg:py-14">
       <section className="mx-auto w-full max-w-4xl rounded-2xl border border-slate-200 bg-white px-6 py-8 shadow-sm sm:px-8 sm:py-10 lg:px-10 lg:py-12">
@@ -105,6 +110,7 @@ export default async function NewMainAdminMemberPage({ searchParams }: PageProps
           ownBranchName={ownBranchName}
           branchOptions={branches ?? []}
           initialState={initialNewMemberFormState}
+          initialSuggestedSheetOrder={suggestedSheetOrder}
         />
       </section>
     </main>

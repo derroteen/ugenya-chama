@@ -10,6 +10,7 @@ export interface NewMemberFormState {
     phone: string;
     idNumber: string;
     selectedBranchId: string;
+    sheetOrder: string;
   };
 }
 

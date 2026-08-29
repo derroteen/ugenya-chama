@@ -11,6 +11,7 @@ interface CreateMemberInput {
   phone: string
   idNumber?: string
   branchId: string
+  sheetOrder?: number | null
 }
 
 const MAX_FULL_NAME_LENGTH = 120
@@ -134,6 +135,25 @@ export async function createMember(input: CreateMemberInput) {
     )
   }
 
+  const sheetOrder = input.sheetOrder ?? null
+
+  if (sheetOrder !== null) {
+    const { data: conflictingMember, error: sheetOrderConflictError } = await supabase
+      .from('members')
+      .select('full_name')
+      .eq('branch_id', branchId)
+      .eq('sheet_order', sheetOrder)
+      .maybeSingle()
+
+    if (sheetOrderConflictError) throw sheetOrderConflictError
+
+    if (conflictingMember) {
+      throw new Error(
+        `Sheet position ${sheetOrder} is already assigned to ${conflictingMember.full_name} in this branch. Choose a different position.`
+      )
+    }
+  }
+
   const initialPassword = toLocalPhoneFormat(normalizedPhone)
   const email = memberIdToEmail(memberId)
 
@@ -156,6 +176,7 @@ export async function createMember(input: CreateMemberInput) {
       full_name: fullName,
       phone: normalizedPhone,
       id_number: idNumber ?? null,
+      sheet_order: sheetOrder,
       must_change_password: true,
     })
     .select()

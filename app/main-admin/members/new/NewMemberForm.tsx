@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
-import { addMemberAction } from "./actions";
+import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
+import { addMemberAction, getSuggestedSheetOrderAction } from "./actions";
 import { type NewMemberFormState } from "./form-state";
 import { useOnlineStatus } from "@/lib/useOnlineStatus";
 import OfflineBanner from "@/app/components/OfflineBanner";
@@ -17,6 +17,7 @@ interface NewMemberFormProps {
   ownBranchName: string | null;
   branchOptions: BranchOption[];
   initialState: NewMemberFormState;
+  initialSuggestedSheetOrder: number | null;
 }
 
 export default function NewMemberForm({
@@ -25,12 +26,34 @@ export default function NewMemberForm({
   ownBranchName,
   branchOptions,
   initialState,
+  initialSuggestedSheetOrder,
 }: NewMemberFormProps) {
   const [state, formAction, isPending] = useActionState(addMemberAction, initialState);
   const isOffline = !useOnlineStatus();
   const [showSuccess, setShowSuccess] = useState(false);
   const [copied, setCopied] = useState(false);
   const [resetVersion, setResetVersion] = useState(0);
+  const [sheetOrderValue, setSheetOrderValue] = useState(
+    () => state.defaults?.sheetOrder ?? (initialSuggestedSheetOrder != null ? String(initialSuggestedSheetOrder) : "")
+  );
+  const [, startSheetOrderTransition] = useTransition();
+
+  // Resync the Row No. field whenever the action returns fresh defaults (validation
+  // error - keep what was typed; success - the next suggestion) or the form is reset
+  // via "Add another member". Does not run on every keystroke, so typing stays free.
+  useEffect(() => {
+    setSheetOrderValue(
+      state.defaults?.sheetOrder ?? (initialSuggestedSheetOrder != null ? String(initialSuggestedSheetOrder) : "")
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, resetVersion]);
+
+  function handleBranchChange(newBranchId: string) {
+    startSheetOrderTransition(async () => {
+      const suggestion = await getSuggestedSheetOrderAction(newBranchId);
+      setSheetOrderValue(suggestion != null ? String(suggestion) : "");
+    });
+  }
 
   useEffect(() => {
     if (state.status === "success") {
@@ -135,6 +158,7 @@ export default function NewMemberForm({
               name="branchId"
               required
               defaultValue={branchSelectDefault}
+              onChange={(event) => handleBranchChange(event.target.value)}
               className="block w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-lg text-slate-900 outline-none transition focus:border-[#1d3a8a] focus:ring-2 focus:ring-[#bfdbfe]"
             >
               <option value="" disabled>
@@ -180,6 +204,28 @@ export default function NewMemberForm({
             placeholder="07XXXXXXXX"
           />
           <p className="mt-2 text-sm text-slate-500">Use Kenyan format, for example: 07XXXXXXXX.</p>
+        </div>
+
+        <div>
+          <label htmlFor="sheetOrder" className="mb-2 block text-base font-semibold text-[#0f1729]">
+            Row No. (Sheet Position)
+          </label>
+          <input
+            id="sheetOrder"
+            name="sheetOrder"
+            type="number"
+            min={1}
+            step={1}
+            inputMode="numeric"
+            value={sheetOrderValue}
+            onChange={(event) => setSheetOrderValue(event.target.value)}
+            className="block w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-lg text-slate-900 outline-none transition focus:border-[#1d3a8a] focus:ring-2 focus:ring-[#bfdbfe]"
+            placeholder="Row number on the branch's paper sheet"
+          />
+          <p className="mt-2 text-sm text-slate-500">
+            Suggested automatically as the next open row for this branch - change it if this member belongs at a
+            different position.
+          </p>
         </div>
 
         <div>

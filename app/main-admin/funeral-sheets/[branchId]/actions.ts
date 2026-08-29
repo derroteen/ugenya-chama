@@ -255,3 +255,161 @@ export async function saveFuneralCollections(
     };
   }
 }
+
+export type FuneralCollectionEventSummary = {
+  eventDescription: string;
+  collectionDate: string;
+  totalAmount: number;
+  memberCount: number;
+};
+
+export type FuneralCollectionEventDetailRow = {
+  memberId: string;
+  amount: string;
+  source: FuneralCollectionSource;
+};
+
+export async function loadFuneralCollectionEvents(branchId: string): Promise<FuneralCollectionEventSummary[]> {
+  const { supabase } = await ensureAdminAccess();
+
+  const { data: rows, error } = await supabase
+    .from("funeral_collections")
+    .select("event_description, collection_date, amount")
+    .eq("branch_id", branchId)
+    .order("collection_date", { ascending: false });
+
+  if (error) throw error;
+
+  const grouped = new Map<string, FuneralCollectionEventSummary>();
+
+  for (const row of rows ?? []) {
+    const key = `${row.event_description}|${row.collection_date}`;
+    const existing = grouped.get(key);
+    const amount = Number(row.amount ?? 0);
+
+    if (existing) {
+      existing.totalAmount += amount;
+      existing.memberCount += 1;
+    } else {
+      grouped.set(key, {
+        eventDescription: row.event_description,
+        collectionDate: row.collection_date,
+        totalAmount: amount,
+        memberCount: 1,
+      });
+    }
+  }
+
+  return Array.from(grouped.values()).sort((a, b) => (a.collectionDate < b.collectionDate ? 1 : -1));
+}
+
+export async function loadFuneralCollectionEventDetail(
+  branchId: string,
+  eventDescription: string,
+  collectionDate: string
+): Promise<FuneralCollectionEventDetailRow[]> {
+  const { supabase } = await ensureAdminAccess();
+
+  const { data: rows, error } = await supabase
+    .from("funeral_collections")
+    .select("member_id, amount, source")
+    .eq("branch_id", branchId)
+    .eq("event_description", eventDescription)
+    .eq("collection_date", collectionDate);
+
+  if (error) throw error;
+
+  return (rows ?? []).map((row) => ({
+    memberId: row.member_id,
+    amount: String(row.amount ?? 0),
+    source: (row.source === "emergency_fund" ? "emergency_fund" : "cash") as FuneralCollectionSource,
+  }));
+}
+
+/** Deletes every row for one event (branch + event description + date) at once. */
+export async function deleteFuneralCollectionEvent(
+  branchId: string,
+  eventDescription: string,
+  collectionDate: string
+): Promise<SaveFuneralCollectionsResult> {
+  try {
+    const requestHeaders = await headers();
+    const ip = getClientIpFromHeaders(requestHeaders);
+    const rateLimit = checkRateLimit(ip, "delete_funeral_collection_event", 30);
+    if (!rateLimit.allowed) {
+      return { status: "error", message: "Too many delete attempts. Please try again in 15 minutes." };
+    }
+
+    const { supabase } = await ensureAdminAccess();
+
+    const description = eventDescription.trim();
+    const date = collectionDate.trim();
+    if (!description || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return { status: "error", message: "A valid event and date are required." };
+    }
+
+    const { error } = await supabase
+      .from("funeral_collections")
+      .delete()
+      .eq("branch_id", branchId)
+      .eq("event_description", description)
+      .eq("collection_date", date);
+
+    if (error) throw error;
+
+    revalidatePath(`/main-admin/funeral-sheets/${branchId}`);
+    revalidatePath("/main-admin/funeral-sheets");
+
+    return { status: "success", message: "Event deleted." };
+  } catch (error) {
+    return {
+      status: "error",
+      message: error instanceof Error && error.message ? error.message : "Unable to delete event.",
+    };
+  }
+}
+
+/** Deletes just one member's row from an event, leaving the rest of the event untouched. */
+export async function deleteFuneralCollectionRow(
+  branchId: string,
+  memberId: string,
+  eventDescription: string,
+  collectionDate: string
+): Promise<SaveFuneralCollectionsResult> {
+  try {
+    const requestHeaders = await headers();
+    const ip = getClientIpFromHeaders(requestHeaders);
+    const rateLimit = checkRateLimit(ip, "delete_funeral_collection_row", 60);
+    if (!rateLimit.allowed) {
+      return { status: "error", message: "Too many delete attempts. Please try again in 15 minutes." };
+    }
+
+    const { supabase } = await ensureAdminAccess();
+
+    const description = eventDescription.trim();
+    const date = collectionDate.trim();
+    if (!memberId || !description || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return { status: "error", message: "A valid member, event, and date are required." };
+    }
+
+    const { error } = await supabase
+      .from("funeral_collections")
+      .delete()
+      .eq("branch_id", branchId)
+      .eq("member_id", memberId)
+      .eq("event_description", description)
+      .eq("collection_date", date);
+
+    if (error) throw error;
+
+    revalidatePath(`/main-admin/funeral-sheets/${branchId}`);
+    revalidatePath("/main-admin/funeral-sheets");
+
+    return { status: "success", message: "Entry removed." };
+  } catch (error) {
+    return {
+      status: "error",
+      message: error instanceof Error && error.message ? error.message : "Unable to remove entry.",
+    };
+  }
+}

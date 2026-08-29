@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getNextSheetOrder } from "@/lib/members/nextSheetOrder";
 import DeleteMemberButton from "./DeleteMemberButton";
 import MemberDetailsTabs from "./MemberDetailsTabs";
 import MemberProfileForm from "./MemberProfileForm";
@@ -178,6 +179,11 @@ export default async function MainAdminMemberDetailsPage({ params }: PageProps) 
 
   const branchName = getJoinedBranchName(memberRecord.branches);
 
+  const suggestedSheetOrder =
+    memberRecord.sheet_order == null
+      ? await getNextSheetOrder(supabase, memberRecord.branch_id).catch(() => null)
+      : null;
+
   return (
     <main className="bg-[#eef2ff] px-4 py-10 text-[#475569] sm:px-6 lg:px-8 lg:py-14">
       <section className="mx-auto w-full max-w-6xl rounded-2xl border border-slate-200 bg-white px-6 py-8 shadow-sm sm:px-8 sm:py-10 lg:px-10 lg:py-12">
@@ -231,7 +237,7 @@ export default async function MainAdminMemberDetailsPage({ params }: PageProps) 
           idNumber={memberRecord.id_number}
           status={memberRecord.status}
           kbgSharesBf={memberRecord.kbg_shares_bf}
-          sheetOrder={memberRecord.sheet_order}
+          sheetOrder={memberRecord.sheet_order ?? suggestedSheetOrder}
         />
 
         <section className="mt-8">

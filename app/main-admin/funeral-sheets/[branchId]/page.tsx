@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { loadFuneralSheetMembers } from "./actions";
+import { loadFuneralCollectionEvents, loadFuneralSheetMembers } from "./actions";
 import FuneralSheetForm from "./FuneralSheetForm";
 
 type PageProps = {
@@ -46,7 +46,10 @@ export default async function FuneralSheetPage({ params }: PageProps) {
     );
   }
 
-  const members = await loadFuneralSheetMembers(branchId);
+  const [members, pastEvents] = await Promise.all([
+    loadFuneralSheetMembers(branchId),
+    loadFuneralCollectionEvents(branchId),
+  ]);
 
   return (
     <main className="bg-[#eef2ff] px-4 py-10 text-[#475569] sm:px-6 lg:px-8 lg:py-14">
@@ -74,7 +77,7 @@ export default async function FuneralSheetPage({ params }: PageProps) {
           monthly emergency fund tracked on the contribution sheet.
         </p>
 
-        <FuneralSheetForm branchId={branch.id} members={members} />
+        <FuneralSheetForm branchId={branch.id} members={members} pastEvents={pastEvents} />
       </section>
     </main>
   );

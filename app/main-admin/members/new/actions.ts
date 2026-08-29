@@ -2,6 +2,7 @@
 
 import { createMember } from "@/lib/auth/createMember";
 import { createClient } from "@/lib/supabase/server";
+import { getNextSheetOrder } from "@/lib/members/nextSheetOrder";
 import type { NewMemberFormState } from "./form-state";
 
 type AdminRole = "main_admin" | "superadmin";
@@ -49,6 +50,49 @@ function validateMaxLength(value: string, fieldName: string, maxLength: number) 
   }
 }
 
+function parseOptionalSheetOrder(value: string) {
+  const raw = value.trim();
+  if (!raw) return null;
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new Error("Row No. must be a positive integer.");
+  }
+  return parsed;
+}
+
+/**
+ * Callable from the client when the branch dropdown changes, to refresh the
+ * suggested Row No. for the newly selected branch. Read-only, but still gated
+ * on admin role since server actions are reachable directly, not just via the form.
+ */
+export async function getSuggestedSheetOrderAction(branchId: string): Promise<number | null> {
+  const trimmedBranchId = String(branchId ?? "").trim();
+  if (!trimmedBranchId) return null;
+
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return null;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  const role = profile?.role as AdminRole | undefined;
+  if (role !== "main_admin" && role !== "superadmin") return null;
+
+  try {
+    return await getNextSheetOrder(supabase, trimmedBranchId);
+  } catch {
+    return null;
+  }
+}
+
 export async function addMemberAction(
   _previousState: NewMemberFormState,
   formData: FormData
@@ -58,6 +102,7 @@ export async function addMemberAction(
     const phone = String(formData.get("phone") ?? "").trim();
     const idNumber = String(formData.get("idNumber") ?? "").trim();
     const selectedBranchId = String(formData.get("branchId") ?? "").trim();
+    const sheetOrderRaw = String(formData.get("sheetOrder") ?? "").trim();
 
     validateMaxLength(fullName, "Full Name", MAX_FULL_NAME_LENGTH);
     validateMaxLength(phone, "Phone Number", MAX_PHONE_LENGTH);
@@ -69,6 +114,7 @@ export async function addMemberAction(
       phone,
       idNumber,
       selectedBranchId,
+      sheetOrder: sheetOrderRaw,
     };
 
     if (!fullName || !phone) {
@@ -84,6 +130,17 @@ export async function addMemberAction(
         status: "error",
         errorMessage:
           "Phone number format is invalid. Use 07XXXXXXXX or 2547XXXXXXXX.",
+        defaults,
+      };
+    }
+
+    let sheetOrder: number | null;
+    try {
+      sheetOrder = parseOptionalSheetOrder(sheetOrderRaw);
+    } catch (error) {
+      return {
+        status: "error",
+        errorMessage: toErrorMessage(error),
         defaults,
       };
     }
@@ -179,7 +236,10 @@ export async function addMemberAction(
         phone,
         idNumber: idNumber || undefined,
         branchId: branchIdToUse,
+        sheetOrder,
       });
+
+      const nextSuggestedSheetOrder = await getNextSheetOrder(supabase, branchIdToUse).catch(() => null);
 
       return {
         status: "success",
@@ -192,6 +252,7 @@ export async function addMemberAction(
           phone: "",
           idNumber: "",
           selectedBranchId: branchIdToUse,
+          sheetOrder: nextSuggestedSheetOrder ? String(nextSuggestedSheetOrder) : "",
         },
       };
     } catch (error) {
@@ -210,6 +271,7 @@ export async function addMemberAction(
         phone: String(formData.get("phone") ?? "").trim(),
         idNumber: String(formData.get("idNumber") ?? "").trim(),
         selectedBranchId: String(formData.get("branchId") ?? "").trim(),
+        sheetOrder: String(formData.get("sheetOrder") ?? "").trim(),
       },
     };
   }
