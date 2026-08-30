@@ -157,3 +157,105 @@ export async function addTransaction(
     };
   }
 }
+
+export async function updateTransaction(
+  transactionId: string,
+  ventureId: string,
+  transactionDateInput: string,
+  transactionTypeInput: string,
+  descriptionInput: string,
+  amountInput: string
+): Promise<AddTransactionResult> {
+  try {
+    const requestHeaders = await headers();
+    const ip = getClientIpFromHeaders(requestHeaders);
+    const rateLimit = checkRateLimit(ip, "edit_business_transaction", 60);
+    if (!rateLimit.allowed) {
+      return {
+        status: "error",
+        message: "Too many attempts. Please try again in 15 minutes.",
+      };
+    }
+
+    const { supabase } = await ensureAdminAccess();
+
+    const transactionDate = transactionDateInput.trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(transactionDate)) {
+      return { status: "error", message: "A valid transaction date is required." };
+    }
+
+    const transactionType = transactionTypeInput.trim() as TransactionType;
+    if (!TRANSACTION_TYPES.includes(transactionType)) {
+      return { status: "error", message: "Invalid transaction type." };
+    }
+
+    const description = descriptionInput.trim();
+    if (description.length > 500) {
+      return { status: "error", message: "Description must be 500 characters or fewer." };
+    }
+
+    const amountRaw = amountInput.trim();
+    const amount = Number(amountRaw);
+    if (!amountRaw || !Number.isFinite(amount) || amount <= 0) {
+      return { status: "error", message: "Amount must be a positive number." };
+    }
+
+    const { error } = await supabase
+      .from("business_transactions")
+      .update({
+        transaction_date: transactionDate,
+        transaction_type: transactionType,
+        description: description || null,
+        amount,
+      })
+      .eq("id", transactionId)
+      .eq("venture_id", ventureId);
+
+    if (error) throw error;
+
+    revalidatePath(`/main-admin/business/${ventureId}`);
+
+    return { status: "success", message: "Transaction updated successfully." };
+  } catch (error) {
+    return {
+      status: "error",
+      message: error instanceof Error && error.message ? error.message : "Unable to update transaction.",
+    };
+  }
+}
+
+export async function deleteTransaction(
+  transactionId: string,
+  ventureId: string
+): Promise<AddTransactionResult> {
+  try {
+    const requestHeaders = await headers();
+    const ip = getClientIpFromHeaders(requestHeaders);
+    const rateLimit = checkRateLimit(ip, "delete_business_transaction", 60);
+    if (!rateLimit.allowed) {
+      return {
+        status: "error",
+        message: "Too many attempts. Please try again in 15 minutes.",
+      };
+    }
+
+    const { supabase } = await ensureAdminAccess();
+
+    const { error } = await supabase
+      .from("business_transactions")
+      .delete()
+      .eq("id", transactionId)
+      .eq("venture_id", ventureId);
+
+    if (error) throw error;
+
+    revalidatePath(`/main-admin/business/${ventureId}`);
+
+    return { status: "success", message: "Transaction deleted." };
+  } catch (error) {
+    return {
+      status: "error",
+      message: error instanceof Error && error.message ? error.message : "Unable to delete transaction.",
+    };
+  }
+}

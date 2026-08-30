@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { openMonthForBranch } from "../actions";
 import SheetFilters from "./SheetFilters";
@@ -70,10 +71,21 @@ export default async function MainAdminBranchSheetPage({ params, searchParams }:
   return (
     <main className="bg-[#eef2ff] px-4 py-10 text-[#475569] sm:px-6 lg:px-8 lg:py-14">
       <section className="mx-auto w-full max-w-[95rem] rounded-2xl border border-slate-200 bg-white px-6 py-8 shadow-sm sm:px-8 sm:py-10 lg:px-10 lg:py-12">
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#c9a227]">UAE Monthly Sheets</p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-[#0f1729] [font-family:var(--font-uae-display)] sm:text-4xl">
-          {selectedBranch.name} Contribution Sheet
-        </h1>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#c9a227]">UAE Monthly Sheets</p>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-[#0f1729] [font-family:var(--font-uae-display)] sm:text-4xl">
+              {selectedBranch.name} Contribution Sheet
+            </h1>
+          </div>
+
+          <Link
+            href={`/main-admin/branches/${branchId}`}
+            className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-[#0f1729] transition hover:bg-slate-50"
+          >
+            ← Back to {selectedBranch.name} Branch
+          </Link>
+        </div>
 
         <SheetFilters
           branches={branchOptions}

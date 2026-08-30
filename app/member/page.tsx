@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import DownloadOwnBranchBlankSheetButton from "./DownloadOwnBranchBlankSheetButton";
 import InstallPWAButton from "@/components/InstallPWAButton";
 
 function formatKsh(value: number) {
@@ -170,7 +169,6 @@ export default async function MemberDashboardPage() {
         </p>
 
         <div className="mt-6 flex flex-wrap items-center gap-3">
-          <DownloadOwnBranchBlankSheetButton />
           <Link
             href="/member/passbook"
             className="inline-flex items-center justify-center rounded-lg border border-[#1d3a8a]/20 bg-white px-5 py-2.5 text-sm font-semibold text-[#0f1729] transition hover:border-[#1d3a8a]/35 hover:bg-slate-50"

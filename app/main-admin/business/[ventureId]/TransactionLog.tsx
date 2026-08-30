@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { addTransaction, type BusinessTransaction } from "./actions";
+import { addTransaction, deleteTransaction, updateTransaction, type BusinessTransaction } from "./actions";
 import { TRANSACTION_TYPES, type TransactionType } from "./transaction-types";
 import { useOnlineStatus } from "@/lib/useOnlineStatus";
 import OfflineBanner from "@/app/components/OfflineBanner";
@@ -50,6 +50,16 @@ export default function TransactionLog({ ventureId, month, transactions }: Trans
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const isOffline = !useOnlineStatus();
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDate, setEditDate] = useState("");
+  const [editType, setEditType] = useState<TransactionType>("income");
+  const [editDescription, setEditDescription] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+  const [isUpdating, startUpdating] = useTransition();
+  const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
+  const [isDeleting, startDeleting] = useTransition();
+  const [rowError, setRowError] = useState("");
 
   const groups = useMemo(() => {
     const map = new Map<TransactionType, BusinessTransaction[]>();
@@ -101,6 +111,68 @@ export default function TransactionLog({ ventureId, month, transactions }: Trans
       } else {
         router.refresh();
       }
+    });
+  }
+
+  function startEditing(row: BusinessTransaction) {
+    setRowError("");
+    setEditingId(row.id);
+    setEditDate(row.transactionDate);
+    setEditType(row.transactionType);
+    setEditDescription(row.description);
+    setEditAmount(String(row.amount));
+  }
+
+  function cancelEditing() {
+    setEditingId(null);
+    setRowError("");
+  }
+
+  function handleSaveEdit(transactionId: string) {
+    setRowError("");
+
+    startUpdating(async () => {
+      const result = await updateTransaction(
+        transactionId,
+        ventureId,
+        editDate,
+        editType,
+        editDescription,
+        editAmount
+      );
+
+      if (result.status === "error") {
+        setRowError(result.message);
+        return;
+      }
+
+      setEditingId(null);
+      const editedMonth = editDate.slice(0, 7);
+      if (editedMonth !== month) {
+        router.push(`/main-admin/business/${ventureId}?month=${editedMonth}`);
+      } else {
+        router.refresh();
+      }
+    });
+  }
+
+  function handleDelete(transactionId: string) {
+    setRowError("");
+    const confirmed = window.confirm("Delete this transaction? This cannot be undone.");
+    if (!confirmed) return;
+
+    setIsDeletingId(transactionId);
+    startDeleting(async () => {
+      const result = await deleteTransaction(transactionId, ventureId);
+
+      if (result.status === "error") {
+        setRowError(result.message);
+        setIsDeletingId(null);
+        return;
+      }
+
+      setIsDeletingId(null);
+      router.refresh();
     });
   }
 
@@ -214,6 +286,20 @@ export default function TransactionLog({ ventureId, month, transactions }: Trans
         </div>
       </div>
 
+      {rowError ? (
+        <div className="mt-4 flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-800">
+          <span>{rowError}</span>
+          <button
+            type="button"
+            onClick={() => setRowError("")}
+            className="rounded px-1 text-rose-700 transition hover:bg-rose-100"
+            aria-label="Dismiss error message"
+          >
+            x
+          </button>
+        </div>
+      ) : null}
+
       <div className="mt-8 space-y-6">
         {TRANSACTION_TYPES.map((type) => {
           const rows = groups.get(type) ?? [];
@@ -243,23 +329,120 @@ export default function TransactionLog({ ventureId, month, transactions }: Trans
                             Date
                           </th>
                           <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+                            Type
+                          </th>
+                          <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
                             Description
                           </th>
                           <th className="px-4 py-2 text-right text-xs font-semibold uppercase tracking-wide text-slate-600">
                             Amount
                           </th>
+                          <th className="px-4 py-2 text-right text-xs font-semibold uppercase tracking-wide text-slate-600">
+                            Actions
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 bg-white">
-                        {rows.map((row) => (
-                          <tr key={row.id} className="hover:bg-slate-50/70">
-                            <td className="px-4 py-2 text-sm text-slate-700">{formatDate(row.transactionDate)}</td>
-                            <td className="px-4 py-2 text-sm text-slate-700">{row.description || "-"}</td>
-                            <td className="px-4 py-2 text-right text-sm font-medium text-[#0f1729]">
-                              {formatKsh(row.amount)}
-                            </td>
-                          </tr>
-                        ))}
+                        {rows.map((row) => {
+                          const isEditing = editingId === row.id;
+
+                          if (isEditing) {
+                            return (
+                              <tr key={row.id} className="bg-[#f8fbff]">
+                                <td className="px-4 py-2">
+                                  <input
+                                    type="date"
+                                    value={editDate}
+                                    onChange={(event) => setEditDate(event.target.value)}
+                                    className="block w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 outline-none transition focus:border-[#1d3a8a] focus:ring-2 focus:ring-[#bfdbfe]"
+                                  />
+                                </td>
+                                <td className="px-4 py-2">
+                                  <select
+                                    value={editType}
+                                    onChange={(event) => setEditType(event.target.value as TransactionType)}
+                                    className="block w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 outline-none transition focus:border-[#1d3a8a] focus:ring-2 focus:ring-[#bfdbfe]"
+                                  >
+                                    {TRANSACTION_TYPES.map((t) => (
+                                      <option key={t} value={t}>
+                                        {TYPE_LABELS[t]}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </td>
+                                <td className="px-4 py-2">
+                                  <input
+                                    type="text"
+                                    value={editDescription}
+                                    onChange={(event) => setEditDescription(event.target.value)}
+                                    maxLength={500}
+                                    className="block w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 outline-none transition focus:border-[#1d3a8a] focus:ring-2 focus:ring-[#bfdbfe]"
+                                  />
+                                </td>
+                                <td className="px-4 py-2">
+                                  <input
+                                    type="number"
+                                    min={0.01}
+                                    step="0.01"
+                                    value={editAmount}
+                                    onChange={(event) => setEditAmount(event.target.value)}
+                                    className="block w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-right text-sm text-slate-900 outline-none transition focus:border-[#1d3a8a] focus:ring-2 focus:ring-[#bfdbfe]"
+                                  />
+                                </td>
+                                <td className="px-4 py-2">
+                                  <div className="flex items-center justify-end gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSaveEdit(row.id)}
+                                      disabled={isUpdating}
+                                      className="inline-flex items-center rounded-md bg-[#1d3a8a] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#16306f] disabled:cursor-not-allowed disabled:opacity-70"
+                                    >
+                                      {isUpdating ? "Saving..." : "Save"}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={cancelEditing}
+                                      disabled={isUpdating}
+                                      className="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-[#0f1729] transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          }
+
+                          return (
+                            <tr key={row.id} className="hover:bg-slate-50/70">
+                              <td className="px-4 py-2 text-sm text-slate-700">{formatDate(row.transactionDate)}</td>
+                              <td className="px-4 py-2 text-sm text-slate-700">{TYPE_LABELS[row.transactionType]}</td>
+                              <td className="px-4 py-2 text-sm text-slate-700">{row.description || "-"}</td>
+                              <td className="px-4 py-2 text-right text-sm font-medium text-[#0f1729]">
+                                {formatKsh(row.amount)}
+                              </td>
+                              <td className="px-4 py-2">
+                                <div className="flex items-center justify-end gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => startEditing(row)}
+                                    className="inline-flex items-center rounded-md border border-[#1d3a8a]/20 bg-white px-3 py-1.5 text-xs font-semibold text-[#1d3a8a] transition hover:border-[#1d3a8a]/35 hover:bg-[#eef2ff]"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDelete(row.id)}
+                                    disabled={isDeleting && isDeletingId === row.id}
+                                    className="inline-flex items-center rounded-md border border-rose-200 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-70"
+                                  >
+                                    {isDeleting && isDeletingId === row.id ? "Deleting..." : "Delete"}
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

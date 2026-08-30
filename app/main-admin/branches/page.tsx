@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import CreateBranchForm from "./CreateBranchForm";
 
 export default async function MainAdminBranchesPage() {
   const supabase = await createClient();
@@ -51,6 +52,8 @@ export default async function MainAdminBranchesPage() {
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-[#0f1729] [font-family:var(--font-uae-display)] sm:text-4xl">
           Branches
         </h1>
+
+        <CreateBranchForm />
 
         <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {branchesWithCounts.map((branch) => (

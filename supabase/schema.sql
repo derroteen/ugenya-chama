@@ -135,10 +135,13 @@ drop policy if exists "branches_read_all" on branches;
 create policy "branches_read_all" on branches
   for select using (true);
 
+-- Branch creation is rare but main_admin needs it too (not just superadmin) -
+-- e.g. to add a newly opened physical branch from the admin portal.
 drop policy if exists "branches_write_superadmin" on branches;
-create policy "branches_write_superadmin" on branches
-  for all using (my_role() = 'superadmin')
-  with check (my_role() = 'superadmin');
+drop policy if exists "branches_write_admin" on branches;
+create policy "branches_write_admin" on branches
+  for all using (my_role() in ('superadmin','main_admin'))
+  with check (my_role() in ('superadmin','main_admin'));
 
 -- ---------- Profiles ----------
 drop policy if exists "profiles_self_read" on profiles;
