@@ -68,10 +68,10 @@ const organizationJsonLd = {
   name: "Ugenya Association Eldoret",
   url: "https://ugenyassociationeldoret.com",
   email: "ugenyaassociationeldoret@gmail.com",
-  telephone: ["+254721342738", "+254713191985"],
+  telephone: ["+254721342738", "+254713191985", "+254720739357"],
   address: {
     "@type": "PostalAddress",
-    postOfficeBoxNumber: "195-30100",
+    postOfficeBoxNumber: "9570-30100",
     addressLocality: "Eldoret",
     addressCountry: "KE",
   },
@@ -405,7 +405,7 @@ export default function Home() {
           }}
         />
         <div className="relative mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-12 text-base sm:px-6 lg:px-8">
-          <p className="font-semibold text-[#0f1729]">P.O. Box 195-30100, Eldoret</p>
+          <p className="font-semibold text-[#0f1729]">P.O. Box 9570-30100, Eldoret</p>
           <p>
             Contact: <a href="mailto:ugenyaassociationeldoret@gmail.com" className="text-[#1d3a8a] underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a]">ugenyaassociationeldoret@gmail.com</a>
           </p>
@@ -414,6 +414,8 @@ export default function Home() {
             <a href="tel:+254721342738" className="text-[#1d3a8a] underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a]">0721 342738</a>
             {" / "}
             <a href="tel:+254713191985" className="text-[#1d3a8a] underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a]">0713 191985</a>
+            {" / "}
+            <a href="tel:+254720739357" className="text-[#1d3a8a] underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a]">0720 739357</a>
           </p>
           <p className="text-slate-500">
             © {year} Ugenya Association Eldoret (UAE). All rights reserved. {" "}
@@ -423,6 +425,10 @@ export default function Home() {
             >
               Terms &amp; Privacy
             </Link>
+          </p>
+          <p className="text-sm text-slate-400">
+            Powered by Dteq Solutions •{" "}
+            <a href="mailto:infodteqsolutions@gmail.com" className="underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d3a8a]">infodteqsolutions@gmail.com</a>
           </p>
         </div>
       </footer>
