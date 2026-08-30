@@ -81,6 +81,9 @@ const styles = StyleSheet.create({
   totalsRow: {
     backgroundColor: "#f8fbff",
   },
+  combinedTotalsRow: {
+    backgroundColor: "#fff9e6",
+  },
   lastRow: {
     borderBottom: "0 solid transparent",
   },
@@ -114,18 +117,6 @@ const styles = StyleSheet.create({
     borderTop: "1 solid #c9a227",
     marginTop: 6,
     paddingTop: 10,
-  },
-  summaryTable: {
-    border: "1 solid #cbd5e1",
-    borderRadius: 4,
-    marginTop: 6,
-    overflow: "hidden",
-  },
-  summaryLabelCell: {
-    width: "34%",
-  },
-  summaryValueCell: {
-    width: "13.2%",
   },
 });
 
@@ -163,14 +154,68 @@ function formatGeneratedAt(value: string) {
   }).format(date);
 }
 
-function renderSummaryTotals(totals: MonthlyReportTotals) {
-  return [
-    { label: "Subs", value: formatAmount(totals.subs) },
-    { label: "Cumulative Saving", value: formatAmount(totals.cumulativeSaving) },
-    { label: "Emerg Subs", value: formatAmount(totals.emergSubs) },
-    { label: "Withdrawal", value: formatAmount(totals.withdrawal) },
-    { label: "Emergency Balance", value: formatAmount(totals.emergencyBalance) },
+/**
+ * Renders one totals row using the same 12-column layout as a branch's member table -
+ * used both for a single branch's own "Totals" row and for the final all-branches
+ * combined row, so every totals row in the document lines up under the same columns.
+ */
+function TotalsRow({
+  label,
+  totals,
+  highlight,
+  isLastRow,
+}: {
+  label: string;
+  totals: MonthlyReportTotals;
+  highlight?: boolean;
+  isLastRow?: boolean;
+}) {
+  const rowStyle = [
+    styles.row,
+    highlight ? styles.combinedTotalsRow : styles.totalsRow,
+    ...(isLastRow ? [styles.lastRow] : []),
   ];
+
+  return (
+    <View style={rowStyle} wrap={false}>
+      <View style={[styles.cell, { width: columns[0].width }]}>
+        <Text style={styles.totalsCellText} />
+      </View>
+      <View style={[styles.cell, { width: columns[1].width }]}>
+        <Text style={styles.totalsCellText}>{label}</Text>
+      </View>
+      <View style={[styles.cell, { width: columns[2].width }]}>
+        <Text style={styles.totalsCellText} />
+      </View>
+      <View style={[styles.cell, { width: columns[3].width }]}>
+        <Text style={[styles.totalsCellText, styles.rightAligned]}>{formatAmount(totals.kbgSharesBf)}</Text>
+      </View>
+      <View style={[styles.cell, { width: columns[4].width }]}>
+        <Text style={[styles.totalsCellText, styles.rightAligned]}>{formatAmount(totals.oldSavingsBf)}</Text>
+      </View>
+      <View style={[styles.cell, { width: columns[5].width }]}>
+        <Text style={[styles.totalsCellText, styles.rightAligned]}>{formatAmount(totals.previousBalanceBf)}</Text>
+      </View>
+      <View style={[styles.cell, { width: columns[6].width }]}>
+        <Text style={[styles.totalsCellText, styles.rightAligned]}>{formatAmount(totals.subs)}</Text>
+      </View>
+      <View style={[styles.cell, { width: columns[7].width }]}>
+        <Text style={[styles.totalsCellText, styles.rightAligned]}>{formatAmount(totals.cumulativeSaving)}</Text>
+      </View>
+      <View style={[styles.cell, { width: columns[8].width }]}>
+        <Text style={[styles.totalsCellText, styles.rightAligned]}>{formatAmount(totals.previousEmergBf)}</Text>
+      </View>
+      <View style={[styles.cell, { width: columns[9].width }]}>
+        <Text style={[styles.totalsCellText, styles.rightAligned]}>{formatAmount(totals.emergSubs)}</Text>
+      </View>
+      <View style={[styles.cell, { width: columns[10].width }]}>
+        <Text style={[styles.totalsCellText, styles.rightAligned]}>{formatAmount(totals.withdrawal)}</Text>
+      </View>
+      <View style={[styles.cell, { width: columns[11].width }, styles.lastCell]}>
+        <Text style={[styles.totalsCellText, styles.rightAligned]}>{formatAmount(totals.emergencyBalance)}</Text>
+      </View>
+    </View>
+  );
 }
 
 export default function MonthlyReportDocument({ report }: MonthlyReportDocumentProps) {
@@ -255,75 +300,30 @@ export default function MonthlyReportDocument({ report }: MonthlyReportDocumentP
                   );
                 })}
 
-                <View style={[styles.row, styles.totalsRow, styles.lastRow]} wrap={false}>
-                  <View style={[styles.cell, { width: columns[0].width }]}>
-                    <Text style={styles.totalsCellText} />
-                  </View>
-                  <View style={[styles.cell, { width: columns[1].width }]}>
-                    <Text style={styles.totalsCellText}>Totals</Text>
-                  </View>
-                  <View style={[styles.cell, { width: columns[2].width }]}>
-                    <Text style={styles.totalsCellText} />
-                  </View>
-                  <View style={[styles.cell, { width: columns[3].width }]}>
-                    <Text style={styles.totalsCellText} />
-                  </View>
-                  <View style={[styles.cell, { width: columns[4].width }]}>
-                    <Text style={styles.totalsCellText} />
-                  </View>
-                  <View style={[styles.cell, { width: columns[5].width }]}>
-                    <Text style={styles.totalsCellText} />
-                  </View>
-                  <View style={[styles.cell, { width: columns[6].width }]}>
-                    <Text style={[styles.totalsCellText, styles.rightAligned]}>{formatAmount(branch.totals.subs)}</Text>
-                  </View>
-                  <View style={[styles.cell, { width: columns[7].width }]}>
-                    <Text style={[styles.totalsCellText, styles.rightAligned]}>{formatAmount(branch.totals.cumulativeSaving)}</Text>
-                  </View>
-                  <View style={[styles.cell, { width: columns[8].width }]}>
-                    <Text style={styles.totalsCellText} />
-                  </View>
-                  <View style={[styles.cell, { width: columns[9].width }]}>
-                    <Text style={[styles.totalsCellText, styles.rightAligned]}>{formatAmount(branch.totals.emergSubs)}</Text>
-                  </View>
-                  <View style={[styles.cell, { width: columns[10].width }]}>
-                    <Text style={[styles.totalsCellText, styles.rightAligned]}>{formatAmount(branch.totals.withdrawal)}</Text>
-                  </View>
-                  <View style={[styles.cell, { width: columns[11].width }, styles.lastCell]}>
-                    <Text style={[styles.totalsCellText, styles.rightAligned]}>{formatAmount(branch.totals.emergencyBalance)}</Text>
-                  </View>
-                </View>
+                <TotalsRow label="Totals" totals={branch.totals} isLastRow />
               </View>
             )}
           </View>
         ))}
 
         <View style={styles.summarySection}>
-          <Text style={styles.branchTitle}>Association-Wide Totals</Text>
-          <View style={styles.summaryTable} wrap={false}>
+          <Text style={styles.branchTitle}>Association-Wide Totals (All Branches Combined)</Text>
+          <View style={styles.table}>
             <View style={[styles.row, styles.headerRow]} wrap={false}>
-              <View style={[styles.cell, styles.summaryLabelCell]}>
-                <Text style={styles.headerCellText}>Metric</Text>
-              </View>
-              <View style={[styles.cell, styles.summaryValueCell, styles.lastCell]}>
-                <Text style={styles.headerCellText}>Amount</Text>
-              </View>
+              {columns.map((column, index) => (
+                <View
+                  key={column.key}
+                  style={[
+                    styles.cell,
+                    { width: column.width },
+                    ...(index === columns.length - 1 ? [styles.lastCell] : []),
+                  ]}
+                >
+                  <Text style={styles.headerCellText}>{column.label}</Text>
+                </View>
+              ))}
             </View>
-
-            {renderSummaryTotals(report.grandTotals).map((item, index, items) => (
-              <View
-                key={item.label}
-                style={[styles.row, ...(index === items.length - 1 ? [styles.lastRow] : [])]}
-                wrap={false}
-              >
-                <View style={[styles.cell, styles.summaryLabelCell]}>
-                  <Text style={styles.bodyCellText}>{item.label}</Text>
-                </View>
-                <View style={[styles.cell, styles.summaryValueCell, styles.lastCell]}>
-                  <Text style={[styles.totalsCellText, styles.rightAligned]}>{item.value}</Text>
-                </View>
-              </View>
-            ))}
+            <TotalsRow label="All Branches Combined" totals={report.grandTotals} highlight isLastRow />
           </View>
         </View>
       </Page>

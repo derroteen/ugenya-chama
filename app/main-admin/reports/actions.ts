@@ -4,8 +4,12 @@ import { createClient } from "@/lib/supabase/server";
 import { ensureMonthRowsForBranch, healBranchCarryForward, isMonthUpToDate } from "@/lib/monthlySheetSync";
 
 export type MonthlyReportTotals = {
+  kbgSharesBf: number;
+  oldSavingsBf: number;
+  previousBalanceBf: number;
   subs: number;
   cumulativeSaving: number;
+  previousEmergBf: number;
   emergSubs: number;
   withdrawal: number;
   emergencyBalance: number;
@@ -111,8 +115,12 @@ function getMemberRelation(relation: MemberRelation | MemberRelation[] | null | 
 
 function createEmptyTotals(): MonthlyReportTotals {
   return {
+    kbgSharesBf: 0,
+    oldSavingsBf: 0,
+    previousBalanceBf: 0,
     subs: 0,
     cumulativeSaving: 0,
+    previousEmergBf: 0,
     emergSubs: 0,
     withdrawal: 0,
     emergencyBalance: 0,
@@ -120,8 +128,12 @@ function createEmptyTotals(): MonthlyReportTotals {
 }
 
 function applyTotals(totals: MonthlyReportTotals, row: MonthlyReportRow) {
+  totals.kbgSharesBf += row.kbgSharesBf;
+  totals.oldSavingsBf += row.oldSavingsBf;
+  totals.previousBalanceBf += row.previousBalanceBf;
   totals.subs += row.subs;
   totals.cumulativeSaving += row.cumulativeSaving;
+  totals.previousEmergBf += row.previousEmergBf;
   totals.emergSubs += row.emergSubs;
   totals.withdrawal += row.withdrawal;
   totals.emergencyBalance += row.emergencyBalance;

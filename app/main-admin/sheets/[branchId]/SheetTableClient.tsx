@@ -120,17 +120,27 @@ export default function SheetTableClient({ rows, isSheetOpen }: SheetTableClient
     () =>
       draftRows.reduce(
         (acc, row) => {
+          acc.kbgSharesBf += toNumber(row.kbgSharesBfInput);
+          acc.oldSavingsBf += toNumber(row.oldSavingsBfInput);
+          acc.previousBalanceBf += toNumber(row.previousBalanceBfInput);
           acc.subs += toNumber(row.subsInput);
           acc.cumulativeSaving += calculateCumulativeSaving(row);
+          acc.previousEmergBf += toNumber(row.previousEmergBfInput);
           acc.emergSubs += toNumber(row.emergSubsInput);
+          acc.cumulativeEmergFund += calculateCumulativeEmergFund(row);
           acc.withdrawal += toNumber(row.withdrawalInput);
           acc.emergencyBalance += calculateEmergencyBalance(row);
           return acc;
         },
         {
+          kbgSharesBf: 0,
+          oldSavingsBf: 0,
+          previousBalanceBf: 0,
           subs: 0,
           cumulativeSaving: 0,
+          previousEmergBf: 0,
           emergSubs: 0,
+          cumulativeEmergFund: 0,
           withdrawal: 0,
           emergencyBalance: 0,
         }
@@ -420,14 +430,17 @@ export default function SheetTableClient({ rows, isSheetOpen }: SheetTableClient
 
             <tfoot className="bg-[#f8fbff]">
               <tr>
-                <td colSpan={5} className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-600">
+                <td colSpan={2} className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-600">
                   Totals
                 </td>
+                <td className="px-3 py-3 text-sm font-semibold text-[#0f1729]">{formatKsh(totals.kbgSharesBf)}</td>
+                <td className="px-3 py-3 text-sm font-semibold text-[#0f1729]">{formatKsh(totals.oldSavingsBf)}</td>
+                <td className="px-3 py-3 text-sm font-semibold text-[#0f1729]">{formatKsh(totals.previousBalanceBf)}</td>
                 <td className="px-3 py-3 text-sm font-semibold text-[#0f1729]">{formatKsh(totals.subs)}</td>
                 <td className="px-3 py-3 text-sm font-semibold text-[#0f1729]">{formatKsh(totals.cumulativeSaving)}</td>
-                <td className="px-3 py-3" />
+                <td className="px-3 py-3 text-sm font-semibold text-[#0f1729]">{formatKsh(totals.previousEmergBf)}</td>
                 <td className="px-3 py-3 text-sm font-semibold text-[#0f1729]">{formatKsh(totals.emergSubs)}</td>
-                <td className="px-3 py-3" />
+                <td className="px-3 py-3 text-sm font-semibold text-[#0f1729]">{formatKsh(totals.cumulativeEmergFund)}</td>
                 <td className="px-3 py-3 text-sm font-semibold text-[#0f1729]">{formatKsh(totals.withdrawal)}</td>
                 <td className="px-3 py-3 text-sm font-semibold text-[#0f1729]">{formatKsh(totals.emergencyBalance)}</td>
                 <td className="px-3 py-3" />
