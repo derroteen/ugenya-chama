@@ -40,3 +40,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 build.log
+
+# generated PDFs / member data dumps - not meant to live in git history
+/docs/
+/scripts/output/
