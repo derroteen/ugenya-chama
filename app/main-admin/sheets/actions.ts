@@ -427,6 +427,80 @@ export async function updateAllEntries(rows: UpdateAllEntriesInput[]): Promise<U
       const member = Array.isArray(memberRelation) ? memberRelation[0] : memberRelation;
       const memberLabel = member?.full_name ?? member?.member_id ?? "Unknown Member";
 
+      // Guard against the exact "carried the whole figures to the next sheet the way they
+      // are" mistake (Kipkaren, August 2026): this only runs when the caller deliberately
+      // unlocked and is saving brought-forward figures (bfOverridden === true), since that
+      // unlock is the only path that can freeze a row's Old Savings B/F / Previous Balance
+      // B/F / Subs forever (bf_overridden = true stops the automatic carry-forward healer
+      // from ever touching it again). If the prior month actually had a contribution
+      // (subs !== 0) and the figures being saved are identical to that prior month's, this
+      // is almost certainly last month's numbers copied forward instead of rolled forward -
+      // block the save and explain the expected values, rather than silently locking in a
+      // duplicate.
+      if (row.bfOverridden === true) {
+        const [priorMonthlyResult, priorEmergencyResult] = await Promise.all([
+          supabase
+            .from("monthly_savings")
+            .select("old_savings_bf, previous_balance_bf, subs")
+            .eq("member_id", monthlyRow.member_id)
+            .lt("month", monthlyRow.month)
+            .order("month", { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+          supabase
+            .from("emergency_contributions")
+            .select("previous_emerg_bf, emerg_subs")
+            .eq("member_id", monthlyRow.member_id)
+            .lt("month", monthlyRow.month)
+            .order("month", { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+        ]);
+
+        if (priorMonthlyResult.error) throw priorMonthlyResult.error;
+        if (priorEmergencyResult.error) throw priorEmergencyResult.error;
+
+        const priorMonthly = priorMonthlyResult.data;
+        if (priorMonthly) {
+          const priorSubs = toNumber(priorMonthly.subs);
+          const priorPreviousBalanceBf = toNumber(priorMonthly.previous_balance_bf);
+          const priorOldSavingsBf = toNumber(priorMonthly.old_savings_bf);
+
+          const looksCopiedFromPriorMonth =
+            priorSubs !== 0 &&
+            oldSavingsBf === priorOldSavingsBf &&
+            previousBalanceBf === priorPreviousBalanceBf &&
+            subs === priorSubs;
+
+          if (looksCopiedFromPriorMonth) {
+            const expectedPreviousBalanceBf = priorPreviousBalanceBf + priorSubs;
+            return {
+              status: "error",
+              message: `Row ${rowNumber} (${memberLabel}): Old Savings B/F, Previous Balance B/F and Subs are all identical to last month's, including a non-zero Subs of ${priorSubs} - this looks like last month's figures were copied instead of carried forward. Previous Balance B/F should normally be ${expectedPreviousBalanceBf} (last month's Previous Balance B/F + last month's Subs), with Subs reset to 0 for this new month's entries. If these figures are genuinely correct, change at least one value slightly to confirm it's intentional before saving.`,
+            };
+          }
+        }
+
+        const priorEmergency = priorEmergencyResult.data;
+        if (priorEmergency) {
+          const priorEmergSubs = toNumber(priorEmergency.emerg_subs);
+          const priorPreviousEmergBf = toNumber(priorEmergency.previous_emerg_bf);
+
+          const looksCopiedFromPriorMonth =
+            priorEmergSubs !== 0 &&
+            previousEmergBf === priorPreviousEmergBf &&
+            emergSubs === priorEmergSubs;
+
+          if (looksCopiedFromPriorMonth) {
+            const expectedPreviousEmergBf = priorPreviousEmergBf + priorEmergSubs;
+            return {
+              status: "error",
+              message: `Row ${rowNumber} (${memberLabel}): Previous Emerg B/F and Emerg Subs are identical to last month's, including a non-zero Emerg Subs of ${priorEmergSubs} - this looks like last month's figures were copied instead of carried forward. Previous Emerg B/F should normally be ${expectedPreviousEmergBf} (last month's Previous Emerg B/F + last month's Emerg Subs), with Emerg Subs reset to 0 for this new month's entries. If these figures are genuinely correct, change at least one value slightly to confirm it's intentional before saving.`,
+            };
+          }
+        }
+      }
+
       const cumulativeSaving = oldSavingsBf + previousBalanceBf + subs;
       const cumulativeEmergFund = previousEmergBf + emergSubs;
       const emergencyBalance = cumulativeEmergFund - withdrawal;
