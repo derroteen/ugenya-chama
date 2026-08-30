@@ -127,6 +127,13 @@ export default function PassbookClient({ initialData }: PassbookClientProps) {
         </div>
       </div>
 
+      {data.kbgSharesBf > 0 ? (
+        <div className="mt-6 flex items-center justify-between gap-3 rounded-xl border border-[#c9a227]/40 bg-[#fffdf5] px-5 py-4">
+          <span className="text-sm font-semibold text-[#0f1729]">KBG Shares B/F</span>
+          <span className="text-lg font-bold text-[#8b6a12]">{formatAmount(data.kbgSharesBf)}</span>
+        </div>
+      ) : null}
+
       {errorMessage ? (
         <div className="mt-6 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {errorMessage}
@@ -143,10 +150,11 @@ export default function PassbookClient({ initialData }: PassbookClientProps) {
           ) : (
             <div className="mt-4 overflow-hidden rounded-xl border border-slate-200">
               <div className="w-full overflow-x-auto" style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-x pan-y" }}>
-                <table className="min-w-[640px] divide-y divide-slate-200 text-left">
+                <table className="min-w-[760px] divide-y divide-slate-200 text-left">
                   <thead className="bg-slate-50">
                     <tr>
                       <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">Month</th>
+                      <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">KBG Shares B/F</th>
                       <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">Old Savings B/F</th>
                       <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">Previous Balance B/F</th>
                       <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">Subs</th>
@@ -157,6 +165,7 @@ export default function PassbookClient({ initialData }: PassbookClientProps) {
                     {data.savingsRows.map((row) => (
                       <tr key={row.month} className="hover:bg-slate-50/70">
                         <td className="px-4 py-3 text-sm text-slate-700">{formatMonthLabel(row.month)}</td>
+                        <td className="px-4 py-3 text-sm text-slate-700">{formatAmount(row.kbgSharesBf)}</td>
                         <td className="px-4 py-3 text-sm text-slate-700">{formatAmount(row.oldSavingsBf)}</td>
                         <td className="px-4 py-3 text-sm text-slate-700">{formatAmount(row.previousBalanceBf)}</td>
                         <td className="px-4 py-3 text-sm text-slate-700">{formatAmount(row.subs)}</td>

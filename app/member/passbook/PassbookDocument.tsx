@@ -124,11 +124,12 @@ const styles = StyleSheet.create({
 });
 
 const savingsColumns = [
-  { key: "month", label: "Month", width: "20%" },
-  { key: "oldSavingsBf", label: "Old Savings B/F", width: "20%" },
-  { key: "previousBalanceBf", label: "Previous Balance B/F", width: "20%" },
-  { key: "subs", label: "Subs", width: "20%" },
-  { key: "cumulativeSaving", label: "Cumulative Saving", width: "20%" },
+  { key: "month", label: "Month", width: "16.6%" },
+  { key: "kbgSharesBf", label: "KBG Shares B/F", width: "16.7%" },
+  { key: "oldSavingsBf", label: "Old Savings B/F", width: "16.7%" },
+  { key: "previousBalanceBf", label: "Previous Balance B/F", width: "16.7%" },
+  { key: "subs", label: "Subs", width: "16.7%" },
+  { key: "cumulativeSaving", label: "Cumulative Saving", width: "16.6%" },
 ] as const;
 
 const emergencyColumns = [
@@ -229,6 +230,7 @@ function renderTable(
 export default function PassbookDocument({ passbook }: PassbookDocumentProps) {
   const savingsRows = passbook.savingsRows.map((row) => ({
     month: row.month,
+    kbgSharesBf: row.kbgSharesBf,
     oldSavingsBf: row.oldSavingsBf,
     previousBalanceBf: row.previousBalanceBf,
     subs: row.subs,

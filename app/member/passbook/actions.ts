@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export type SavingsPassbookRow = {
   month: string;
+  kbgSharesBf: number;
   oldSavingsBf: number;
   previousBalanceBf: number;
   subs: number;
@@ -22,6 +23,7 @@ export type PassbookData = {
   memberName: string;
   memberId: string;
   branchName: string;
+  kbgSharesBf: number;
   fromMonth: string;
   toMonth: string;
   savingsRows: SavingsPassbookRow[];
@@ -85,7 +87,7 @@ async function getAuthenticatedMemberProfile() {
 
   const { data: member, error: memberError } = await supabase
     .from("members")
-    .select("id, member_id, full_name, branch_id")
+    .select("id, member_id, full_name, branch_id, kbg_shares_bf")
     .eq("auth_id", user.id)
     .single();
 
@@ -141,8 +143,14 @@ export async function getMemberPassbookData(fromMonth?: string | null, toMonth?:
     });
   };
 
+  // KBG Shares B/F is a one-time, static-per-member figure stored on members.kbg_shares_bf
+  // (not per month), so the same value is shown alongside every row here - mirroring how
+  // the admin's monthly sheet joins it in from the members table for each row too.
+  const kbgSharesBf = toNumber(member.kbg_shares_bf);
+
   const savingsRows: SavingsPassbookRow[] = filterRowsByRange(monthlyResult.data ?? []).map((row) => ({
     month: row.month,
+    kbgSharesBf,
     oldSavingsBf: toNumber(row.old_savings_bf),
     previousBalanceBf: toNumber(row.previous_balance_bf),
     subs: toNumber(row.subs),
@@ -161,6 +169,7 @@ export async function getMemberPassbookData(fromMonth?: string | null, toMonth?:
     memberName: member.full_name,
     memberId: member.member_id,
     branchName,
+    kbgSharesBf,
     fromMonth: range.fromMonth,
     toMonth: range.toMonth,
     savingsRows,
