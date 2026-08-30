@@ -81,56 +81,6 @@ const styles = StyleSheet.create({
     fontSize: 7,
     fontWeight: 700,
   },
-  broughtForwardRow: {
-    backgroundColor: "#eef2ff",
-  },
-  broughtForwardText: {
-    color: "#1d3a8a",
-    fontSize: 7,
-    fontStyle: "italic",
-  },
-  positionSection: {
-    marginBottom: 12,
-  },
-  positionTitle: {
-    color: "#1d3a8a",
-    fontSize: 10,
-    fontWeight: 700,
-    marginBottom: 6,
-  },
-  positionGrid: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  positionCard: {
-    flex: 1,
-    border: "1 solid #cbd5e1",
-    borderRadius: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  positionCardHighlight: {
-    backgroundColor: "#fff9e6",
-    borderColor: "#c9a227",
-  },
-  positionLabel: {
-    color: "#475569",
-    fontSize: 6.5,
-    textTransform: "uppercase",
-    letterSpacing: 0.4,
-    fontWeight: 700,
-  },
-  positionValue: {
-    color: "#0f1729",
-    fontSize: 11,
-    fontWeight: 700,
-    marginTop: 4,
-  },
-  positionNote: {
-    color: "#64748b",
-    fontSize: 6.5,
-    marginTop: 8,
-  },
 });
 
 function formatAmount(value: number) {
@@ -162,35 +112,6 @@ export default function AnnualReportDocument({ report }: AnnualReportDocumentPro
           <Text style={styles.subtitle}>Generated: {formatGeneratedAt(report.generatedAt)}</Text>
         </View>
 
-        <View style={styles.positionSection}>
-          <Text style={styles.positionTitle}>Savings Position Summary</Text>
-          <View style={styles.positionGrid}>
-            <View style={styles.positionCard}>
-              <Text style={styles.positionLabel}>2025 Totals</Text>
-              <Text style={styles.positionValue}>{formatAmount(report.savingsPosition.priorYearsTotal)}</Text>
-            </View>
-            <View style={styles.positionCard}>
-              <Text style={styles.positionLabel}>{report.year} Total</Text>
-              <Text style={styles.positionValue}>{formatAmount(report.savingsPosition.currentYearTotal)}</Text>
-            </View>
-            <View style={[styles.positionCard, styles.positionCardHighlight]}>
-              <Text style={styles.positionLabel}>Grand Total (Savings)</Text>
-              <Text style={styles.positionValue}>{formatAmount(report.savingsPosition.grandTotal)}</Text>
-            </View>
-            <View style={styles.positionCard}>
-              <Text style={styles.positionLabel}>{report.year} Total (Emergency Fund)</Text>
-              <Text style={styles.positionValue}>{formatAmount(report.emergencyPosition.currentYearTotal)}</Text>
-            </View>
-          </View>
-          <Text style={styles.positionNote}>
-            2025 Totals is each member&apos;s fixed old-savings balance carried in from before this system
-            tracked contributions month by month.{" "}
-            {report.year} Total is everything added since - including, for any stretch of months with no
-            monthly records, the brought-forward balance recorded as at the first month that does have
-            records.
-          </Text>
-        </View>
-
         <View style={styles.table}>
           <View style={[styles.row, styles.headerRow]}>
             <View style={[styles.cell, styles.monthCell]}>
@@ -216,36 +137,31 @@ export default function AnnualReportDocument({ report }: AnnualReportDocumentPro
             </View>
           </View>
 
-          {report.rows.map((row) => {
-            const rowStyle = row.isBroughtForward ? [styles.row, styles.broughtForwardRow] : [styles.row];
-            const textStyle = row.isBroughtForward ? styles.broughtForwardText : styles.bodyText;
-
-            return (
-              <View key={row.month} style={rowStyle}>
-                <View style={[styles.cell, styles.monthCell]}>
-                  <Text style={textStyle}>{row.monthLabel}</Text>
-                </View>
-                <View style={[styles.cell, styles.amountCell]}>
-                  <Text style={textStyle}>{formatAmount(row.totalSubs)}</Text>
-                </View>
-                <View style={[styles.cell, styles.amountCell]}>
-                  <Text style={textStyle}>{formatAmount(row.totalEmergencyContributions)}</Text>
-                </View>
-                <View style={[styles.cell, styles.amountCell]}>
-                  <Text style={textStyle}>{formatAmount(row.totalWithdrawals)}</Text>
-                </View>
-                <View style={[styles.cell, styles.amountCell]}>
-                  <Text style={textStyle}>{formatAmount(row.businessIncome)}</Text>
-                </View>
-                <View style={[styles.cell, styles.amountCell]}>
-                  <Text style={textStyle}>{formatAmount(row.businessExpenses)}</Text>
-                </View>
-                <View style={[styles.cell, styles.amountCell]}>
-                  <Text style={textStyle}>{formatAmount(row.netPosition)}</Text>
-                </View>
+          {report.rows.map((row) => (
+            <View key={row.month} style={styles.row}>
+              <View style={[styles.cell, styles.monthCell]}>
+                <Text style={styles.bodyText}>{row.monthLabel}</Text>
               </View>
-            );
-          })}
+              <View style={[styles.cell, styles.amountCell]}>
+                <Text style={styles.bodyText}>{formatAmount(row.totalSubs)}</Text>
+              </View>
+              <View style={[styles.cell, styles.amountCell]}>
+                <Text style={styles.bodyText}>{formatAmount(row.totalEmergencyContributions)}</Text>
+              </View>
+              <View style={[styles.cell, styles.amountCell]}>
+                <Text style={styles.bodyText}>{formatAmount(row.totalWithdrawals)}</Text>
+              </View>
+              <View style={[styles.cell, styles.amountCell]}>
+                <Text style={styles.bodyText}>{formatAmount(row.businessIncome)}</Text>
+              </View>
+              <View style={[styles.cell, styles.amountCell]}>
+                <Text style={styles.bodyText}>{formatAmount(row.businessExpenses)}</Text>
+              </View>
+              <View style={[styles.cell, styles.amountCell]}>
+                <Text style={styles.bodyText}>{formatAmount(row.netPosition)}</Text>
+              </View>
+            </View>
+          ))}
 
           <View style={[styles.row, styles.totalRow]}>
             <View style={[styles.cell, styles.monthCell]}>
