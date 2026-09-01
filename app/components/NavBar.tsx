@@ -66,8 +66,18 @@ function getAvatarText(displayName: string) {
   const normalized = displayName.trim();
   if (!normalized) return "UA";
 
-  const compact = normalized.replace(/\s+/g, "");
-  return compact.slice(0, 2).toUpperCase();
+  // Initials of the first two names (e.g. "Richard Omondi Okut" -> "RO",
+  // "Mercy Akoth Oloo" -> "MA") - not the first two characters of the
+  // whole string, which used to mangle multi-word names.
+  const words = normalized.split(/\s+/).filter(Boolean);
+  if (words.length === 0) return "UA";
+
+  const initials = words
+    .slice(0, 2)
+    .map((word) => word.charAt(0).toUpperCase())
+    .join("");
+
+  return initials || "UA";
 }
 
 function NavIcon({ icon }: { icon: IconName }) {
@@ -220,7 +230,7 @@ export default function NavBar() {
         if (resolvedRole === "member") {
           const { data: member, error: memberError } = await supabase
             .from("members")
-            .select("id, member_id, branch_id")
+            .select("id, member_id, full_name, branch_id")
             .eq("auth_id", userId)
             .maybeSingle();
 
@@ -230,7 +240,11 @@ export default function NavBar() {
             console.error("NavBar: failed to fetch member record", memberError);
           }
 
-          setDisplayName(member?.member_id ?? profile?.full_name ?? fallbackName);
+          // Use the member's actual name for the nav bar (and its avatar initials).
+          // This used to fall back to member.member_id first - every member's ID
+          // starts with "UA" (e.g. UAE007), which is exactly why the avatar bubble
+          // showed "UA" for every single member instead of their own initials.
+          setDisplayName(member?.full_name ?? profile?.full_name ?? fallbackName);
 
           const branchId = member?.branch_id;
           const { data: announcementRows, error: announcementsError } = await supabase
