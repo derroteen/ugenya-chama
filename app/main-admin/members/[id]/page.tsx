@@ -4,6 +4,7 @@ import { getNextSheetOrder } from "@/lib/members/nextSheetOrder";
 import DeleteMemberButton from "./DeleteMemberButton";
 import MemberDetailsTabs from "./MemberDetailsTabs";
 import MemberProfileForm from "./MemberProfileForm";
+import ResetPasswordButton from "./ResetPasswordButton";
 
 type AdminRole = "main_admin" | "superadmin";
 
@@ -249,7 +250,12 @@ export default async function MainAdminMemberDetailsPage({ params }: PageProps) 
           />
         </section>
 
-        <div className="mt-10 border-t border-slate-200 pt-6">
+        <div className="mt-10 flex flex-wrap items-start justify-end gap-3 border-t border-slate-200 pt-6">
+          <ResetPasswordButton
+            memberId={memberRecord.id}
+            memberName={memberRecord.full_name}
+            memberNumber={memberRecord.member_id}
+          />
           <DeleteMemberButton
             memberId={memberRecord.id}
             memberName={memberRecord.full_name}

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
+import { normalizePhone, toLocalPhoneFormat } from "@/lib/auth/shared";
 
 type AdminRole = "main_admin" | "superadmin";
 
@@ -269,6 +270,87 @@ export async function deleteChild(memberId: string, formData: FormData): Promise
       status: "error",
       message: toErrorMessage(error),
     };
+  }
+}
+
+const MIN_PASSWORD_LENGTH = 6;
+const MAX_PASSWORD_LENGTH = 72;
+
+/**
+ * Resets a member's login password. With no `newPassword`, resets to the member's
+ * stored phone number (in the same local 07XXXXXXXX form used as the initial password
+ * when the member was created). With `newPassword`, sets that value instead.
+ * The password is never logged or stored beyond Supabase Auth.
+ */
+export async function resetMemberPassword(memberId: string, newPassword?: string): Promise<ActionResult> {
+  try {
+    const supabase = await createClient();
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { status: "error", message: "Your session has expired. Please sign in again." };
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError || !profile) {
+      return { status: "error", message: "Could not load your admin profile." };
+    }
+
+    const role = profile.role as AdminRole | null;
+    if (role !== "main_admin" && role !== "superadmin") {
+      return { status: "error", message: "You do not have permission to reset passwords." };
+    }
+
+    const { data: member, error: memberError } = await supabase
+      .from("members")
+      .select("id, auth_id, phone")
+      .eq("id", memberId)
+      .maybeSingle();
+
+    if (memberError || !member) {
+      return { status: "error", message: "Member not found." };
+    }
+
+    if (!member.auth_id) {
+      return { status: "error", message: "This member has no login account to reset." };
+    }
+
+    const useCustom = typeof newPassword === "string" && newPassword.length > 0;
+    const password = useCustom ? newPassword : toLocalPhoneFormat(normalizePhone(String(member.phone ?? "")));
+
+    if (!password) {
+      return { status: "error", message: "This member has no phone number on file to use as a password." };
+    }
+
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      return { status: "error", message: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` };
+    }
+
+    if (password.length > MAX_PASSWORD_LENGTH) {
+      return { status: "error", message: `Password must be ${MAX_PASSWORD_LENGTH} characters or fewer.` };
+    }
+
+    const admin = createAdminClient();
+    const { error: updateError } = await admin.auth.admin.updateUserById(member.auth_id, { password });
+
+    if (updateError) {
+      return { status: "error", message: updateError.message || "Unable to reset the password right now." };
+    }
+
+    return {
+      status: "success",
+      message: useCustom ? "Password reset successfully." : "Password reset to the member's phone number.",
+    };
+  } catch (error) {
+    return { status: "error", message: toErrorMessage(error) };
   }
 }
 
