@@ -11,7 +11,6 @@ export const metadata: Metadata = {
 
 const displayFont = Lora({
   subsets: ["latin"],
-  weight: ["500", "700"],
 });
 
 const bodyFont = Source_Sans_3({
