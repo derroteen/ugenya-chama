@@ -17,7 +17,6 @@ const geistMono = Geist_Mono({
 const uaeDisplay = Lora({
   variable: "--font-uae-display",
   subsets: ["latin"],
-  weight: ["500", "700"],
 });
 
 const uaeSans = Source_Sans_3({
