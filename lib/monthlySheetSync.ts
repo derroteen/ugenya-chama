@@ -216,7 +216,7 @@ export async function cascadeEmergencyContributions(
   supabase: Awaited<ReturnType<typeof createClient>>,
   memberId: string,
   month: string,
-  cumulativeEmergFund: number
+  openingBalance: number
 ): Promise<void> {
   const { data: laterRows, error } = await supabase
     .from("emergency_contributions")
@@ -227,17 +227,19 @@ export async function cascadeEmergencyContributions(
 
   if (error) throw error;
 
-  let priorCumulativeEmergFund = cumulativeEmergFund;
+  // `openingBalance` is the anchor month's CLOSING balance (cumulative - withdrawal),
+  // because that is what the next month must start from.
+  let priorClosingBalance = openingBalance;
   for (const row of laterRows ?? []) {
     const emergSubs = toNumber(row.emerg_subs);
     const withdrawal = toNumber(row.withdrawal);
-    const nextCumulativeEmergFund = priorCumulativeEmergFund + emergSubs;
+    const nextCumulativeEmergFund = priorClosingBalance + emergSubs;
     const emergencyBalance = nextCumulativeEmergFund - withdrawal;
 
     const { error: updateError } = await supabase
       .from("emergency_contributions")
       .update({
-        previous_emerg_bf: priorCumulativeEmergFund,
+        previous_emerg_bf: priorClosingBalance,
         cumulative_emerg_fund: nextCumulativeEmergFund,
         emergency_balance: emergencyBalance,
         bf_overridden: false,
@@ -245,7 +247,7 @@ export async function cascadeEmergencyContributions(
       .eq("id", row.id);
 
     if (updateError) throw updateError;
-    priorCumulativeEmergFund = nextCumulativeEmergFund;
+    priorClosingBalance = emergencyBalance;
   }
 }
 
@@ -278,14 +280,14 @@ export async function resyncMonthlySavingsForwardForBranch(
 
   const { data: anchorEmergencyRows, error: anchorEmergencyRowsError } = await supabase
     .from("emergency_contributions")
-    .select("member_id, cumulative_emerg_fund")
+    .select("member_id, emergency_balance")
     .eq("branch_id", branchId)
     .eq("month", fromMonth);
 
   if (anchorEmergencyRowsError) throw anchorEmergencyRowsError;
 
   const anchorEmergencyByMember = new Map<string, number>(
-    (anchorEmergencyRows ?? []).map((row) => [row.member_id, toNumber(row.cumulative_emerg_fund)])
+    (anchorEmergencyRows ?? []).map((row) => [row.member_id, toNumber(row.emergency_balance)])
   );
 
   for (const anchor of anchorRows ?? []) {
@@ -298,9 +300,9 @@ export async function resyncMonthlySavingsForwardForBranch(
       toNumber(anchor.subs)
     );
 
-    const cumulativeEmergFund = anchorEmergencyByMember.get(anchor.member_id);
-    if (cumulativeEmergFund !== undefined) {
-      await cascadeEmergencyContributions(supabase, anchor.member_id, fromMonth, cumulativeEmergFund);
+    const closingEmergBalance = anchorEmergencyByMember.get(anchor.member_id);
+    if (closingEmergBalance !== undefined) {
+      await cascadeEmergencyContributions(supabase, anchor.member_id, fromMonth, closingEmergBalance);
     }
   }
 
@@ -413,17 +415,17 @@ export async function healBranchCarryForward(
   for (const memberRows of emergencyByMember.values()) {
     memberRows.sort((a, b) => (a.month < b.month ? -1 : a.month > b.month ? 1 : 0));
 
-    let anchorCumulativeEmergFund = toNumber(memberRows[0].cumulative_emerg_fund);
+    let anchorClosingBalance = toNumber(memberRows[0].emergency_balance);
 
     for (let i = 1; i < memberRows.length; i += 1) {
       const row = memberRows[i];
 
       if (row.bf_overridden) {
-        anchorCumulativeEmergFund = toNumber(row.cumulative_emerg_fund);
+        anchorClosingBalance = toNumber(row.emergency_balance);
         continue;
       }
 
-      const expectedPreviousEmergBf = anchorCumulativeEmergFund;
+      const expectedPreviousEmergBf = anchorClosingBalance;
       const emergSubs = toNumber(row.emerg_subs);
       const withdrawal = toNumber(row.withdrawal);
       const expectedCumulativeEmergFund = expectedPreviousEmergBf + emergSubs;
@@ -446,7 +448,7 @@ export async function healBranchCarryForward(
         if (updateError) throw updateError;
       }
 
-      anchorCumulativeEmergFund = expectedCumulativeEmergFund;
+      anchorClosingBalance = expectedEmergencyBalance;
     }
   }
 }
