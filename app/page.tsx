@@ -29,39 +29,6 @@ const branches = [
   "East Huruma",
 ];
 
-const galleryImages = [
-  {
-    src: "/images/gallery/community-1.svg",
-    alt: "Community activity placeholder 1",
-    caption: "Van Hire Business",
-  },
-  {
-    src: "/images/gallery/community-2.svg",
-    alt: "Community activity placeholder 2",
-    caption: "Branch Meeting",
-  },
-  {
-    src: "/images/gallery/community-3.svg",
-    alt: "Community activity placeholder 3",
-    caption: "Member Gathering",
-  },
-  {
-    src: "/images/gallery/community-4.svg",
-    alt: "Community activity placeholder 4",
-    caption: "Community Outreach",
-  },
-  {
-    src: "/images/gallery/community-5.svg",
-    alt: "Community activity placeholder 5",
-    caption: "Savings Group Session",
-  },
-  {
-    src: "/images/gallery/community-6.svg",
-    alt: "Community activity placeholder 6",
-    caption: "Welfare Engagement",
-  },
-];
-
 const organizationJsonLd = {
   "@context": "https://schema.org",
   "@type": "NGO",
@@ -307,31 +274,19 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="gallery" className="relative overflow-hidden bg-white">
-        <div className="relative mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 sm:py-24 lg:px-8 lg:py-28">
-          <div className="flex items-center gap-3">
-            <h2 className={`${displayFont.className} text-3xl font-bold text-[#0f1729] sm:text-4xl`}>Community &amp; Activities</h2>
-            <div className="h-px flex-1 bg-slate-200" aria-hidden="true" />
-          </div>
-
-          <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {galleryImages.map((image) => (
-              <figure key={image.src} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
-                <div className="relative h-72 w-full overflow-hidden bg-slate-200">
-                  <Image
-                    src={image.src}
-                    alt={image.alt}
-                    fill
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    className="object-cover"
-                    unoptimized
-                  />
-                </div>
-                <figcaption className="border-t border-slate-200 bg-[#f8fbff] px-4 py-3 text-sm font-medium text-[#0f1729]">
-                  {image.caption}
-                </figcaption>
-              </figure>
-            ))}
+      <section aria-label="UAE members" className="relative isolate w-full overflow-hidden bg-slate-200">
+        <div className="relative h-[55vh] min-h-[320px] max-h-[720px] w-full sm:h-[60vh]">
+          <Image
+            src="/images/community/uae-members.jpg"
+            alt="Members of Ugenya Association Eldoret gathered outdoors for a group photo"
+            fill
+            sizes="100vw"
+            className="object-cover object-[50%_40%] xl:object-[50%_30%]"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0f1729]/70 via-transparent to-transparent" aria-hidden="true" />
+          <div className="absolute inset-x-0 bottom-0 mx-auto w-full max-w-6xl px-4 pb-6 sm:px-6 sm:pb-8 lg:px-8">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#c9a227] sm:text-sm">Riwruok Eteko</p>
+            <p className={`${displayFont.className} mt-1 text-2xl font-bold text-white sm:text-3xl`}>Ugenya Association Eldoret</p>
           </div>
         </div>
       </section>
